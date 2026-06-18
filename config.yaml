@@ -1,0 +1,107 @@
+# =============================================================================
+# Component 1 — NVTV archival video metadata pipeline
+# All tunable values live here. Nothing should be hardcoded in the stages.
+# =============================================================================
+
+paths:
+  # Root folder that contains the long-form .mp4 videos (and optional matching
+  # .txt synopses / human transcripts with the same basename as the video).
+  #
+  #   - Local machine : set this to wherever your videos live, e.g.
+  #                       /home/me/nvtv  or  D:/datasets/nvtv
+  #   - Google Colab  : upload your videos into the Colab "Files" pane and point
+  #                       this at that folder, e.g.  /content/videos
+  dataset_dir: "./data/nvtv"
+
+  # Everything the pipeline produces is written under output_dir.
+  output_dir: "./output"
+  clips_dir: "./output/clips"           # the 30s .mp4 segments
+  metadata_dir: "./output/metadata"     # one JSON checkpoint per clip
+  embeddings_dir: "./output/embeddings" # one .npy CLIP embedding per clip
+  manifest_path: "./output/manifest.json"
+  failures_path: "./output/failures.json"
+  combined_csv: "./output/metadata_combined.csv"
+
+segmentation:
+  clip_length_sec: 30          # fixed-length clips (no scene detection)
+  video_extensions: [".mp4", ".mov", ".mkv", ".avi", ".m4v"]
+
+models:
+  clip_model: "openai/clip-vit-base-patch32"
+  blip2_model: "Salesforce/blip2-opt-2.7b"
+  whisper_size: "small"        # default; switch to "large-v3" for best quality
+  spacy_model: "en_core_web_sm"
+
+visual:
+  num_keyframes: 6             # evenly-spaced frames sampled per clip for CLIP
+  blip2_max_new_tokens: 40
+
+# Named-entity labels we keep from spaCy.
+entity_labels: ["PERSON", "GPE", "ORG", "LOC", "FAC"]
+
+seed: 42
+
+# -----------------------------------------------------------------------------
+# Zero-shot CLIP categories. Each category produces ONE chosen label and a
+# confidence in the per-clip metadata (10 categories => 10 label fields).
+# -----------------------------------------------------------------------------
+categories:
+  visual_type:
+    - "studio interview"
+    - "field news report"
+    - "panel discussion"
+    - "outdoor event"
+  scene_environment:
+    - "TV studio"
+    - "office interior"
+    - "classroom"
+    - "art gallery"
+    - "building interior"
+    - "city view"
+  subject_topic:
+    - "social policy"
+    - "mental health"
+    - "political affairs"
+    - "community arts"
+    - "workers rights"
+  on_screen_text:
+    - "placards"
+    - "event banners"
+    - "names on screen"
+    - "no visible text"
+  event_activity:
+    - "marching or parade"
+    - "press conference"
+    - "workshop or seminar"
+    - "stage performance"
+  physical_objects:
+    - "microphones"
+    - "camera"
+    - "flags"
+    - "musical instruments"
+  weather_conditions:
+    - "sunny or clear"
+    - "overcast or cloudy"
+    - "raining"
+    - "nighttime or dark"
+    - "indoor (no weather)"
+  crowd_density:
+    - "solo subject"
+    - "two-person interaction"
+    - "small group of 3 to 10"
+    - "large audience or crowd"
+    - "empty scene"
+  infrastructure:
+    - "pedestrianized zone"
+    - "busy traffic intersection"
+    - "railway or transit hub"
+    - "pavement or sidewalk"
+    - "bridge or overpass"
+    - "not applicable"
+  architecture:
+    - "red brick terraced housing"
+    - "civic or government building"
+    - "modern glass and steel commercial"
+    - "historical landmark"
+    - "place of worship"
+    - "not applicable"

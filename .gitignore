@@ -1,0 +1,21 @@
+# Pipeline outputs
+output/
+data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Models / caches
+*.pt
+*.bin
+.cache/
+
+# OS junk
+.DS_Store
+._*

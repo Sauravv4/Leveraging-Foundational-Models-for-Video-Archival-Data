@@ -1,0 +1,25 @@
+# Core
+PyYAML>=6.0
+numpy>=1.24
+pandas>=2.0
+Pillow>=9.5
+opencv-python-headless>=4.8
+
+# Deep-learning stack
+torch>=2.1
+transformers>=4.40           # 8-bit BLIP-2 via BitsAndBytesConfig
+accelerate>=0.27             # required for device_map="auto"
+bitsandbytes>=0.43           # 8-bit quantisation (GPU only)
+sentencepiece>=0.1.99        # BLIP-2 / OPT tokenizer
+
+# Speech + NLP
+openai-whisper>=20231117
+spacy>=3.7
+
+# spaCy English model is installed separately (see README):
+#   python -m spacy download en_core_web_sm
+#
+# ffmpeg / ffprobe must be available on PATH (system package, not pip):
+#   Linux  : sudo apt-get install ffmpeg
+#   macOS  : brew install ffmpeg
+#   Colab  : pre-installed
