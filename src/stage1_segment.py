@@ -55,7 +55,14 @@ def segment_video(cfg: Config, video_path: str) -> List[Dict]:
     cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path,
-        "-map", "0",
+        # Map only the primary video + any audio tracks. We deliberately do NOT
+        # use "-map 0": archival MP4s often carry a data/timecode track (codec
+        # "none") that cannot be stream-copied into the segmented container and
+        # would abort ffmpeg. "0:a?" makes audio optional (video-only clips OK).
+        "-map", "0:v:0",
+        "-map", "0:a?",
+        "-dn",                              # drop data streams
+        "-sn",                              # drop subtitle streams
         "-c", "copy",                       # stream copy: no re-encode
         "-f", "segment",
         "-segment_time", str(cfg.clip_length_sec),
