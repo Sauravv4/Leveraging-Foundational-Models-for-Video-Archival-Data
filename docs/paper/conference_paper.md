@@ -383,15 +383,30 @@ TABLE III. `[tablehead]` FRAME-SAMPLING ABLATION (CALIBRATION SUBSET, *n* = 8)
 | Fixed 20/50/80% | 3.000 | 3.0 | 0.3027 | 0.650 | 0.6879 | 0.5469 |
 | **Scene-aware** | 4.375 | **23.0** | 0.3115 | 0.675 | 0.6089 | 0.5318 |
 
-Scene-aware sampling recovers **23.0 OCR items per clip against 14.5 for the centre frame**, a
-59% increase, and agrees with the centre baseline more closely than fixed three-frame sampling on
-both OCR (0.3115 vs 0.3027) and tags (0.675 vs 0.650) while using more frames. Two findings cut
-against a simple "more frames is better" reading. First, fixed three-frame sampling is *worse than
-the single centre frame* on OCR coverage — 3.0 items against 14.5 — because the dense OCR probe
-that supplies the centre-frame policy is replaced by three sparse frames that mostly miss
-short-lived captions. Second, mean stability is lowest for the scene-aware policy (0.5318): it
-changes the published output on roughly half of the measured comparisons. Coverage and stability
-trade directly, and the choice of scene-aware sampling buys the former at the cost of the latter.
+Set-F1 columns are symmetric set overlap against the centre-frame baseline; people-count
+stability is exp(−|Δ|), so 1.0 is an identical count and 0.368 is a disagreement of one. The
+centre-frame row is 1.0 throughout by construction.
+
+The OCR counts are **not like-for-like, and the reason is the finding.** `aggregate_temporal_ocr`
+sets its persistence threshold from the number of frames it is given: one frame requires one
+occurrence, so the centre-frame policy publishes every raw OCR line unfiltered, which is what
+produces 14.5. Fixed three-frame sampling requires two occurrences out of three widely spaced
+frames, which almost nothing survives — 3.0 items. The scene-aware policy draws its text from the
+dense probe instead, up to 12 frames at 2.5 s spacing, so the same two-occurrence rule has twelve
+chances to be satisfied and the sampling is fine enough to catch short-lived lower-thirds: 23.0
+items. **Against the only like-for-like comparison — both filtered at two occurrences —
+scene-aware publishes roughly eight times the text of fixed three-frame sampling.** The
+centre-frame figure is higher than fixed three's only because no filter is applied to it, and
+should not be read as coverage.
+
+Two further findings cut against a simple "more frames is better" reading. Scene-aware agrees with
+the centre baseline slightly more closely than fixed three-frame does on both OCR (0.3115 vs
+0.3027) and tags (0.675 vs 0.650), despite sampling more frames — so the added frames are not
+simply pulling the output away from the baseline. But mean stability is *lowest* for scene-aware
+(0.5318 against 0.5469), driven by people count (0.6089 against 0.6879): looking at more of the
+clip finds more people than the centre frame shows, and changes the published count accordingly.
+Coverage and agreement-with-baseline trade directly, and choosing scene-aware buys the former at
+the cost of the latter.
 
 The subset is 8 clips. This is an underpowered ablation and no significance is claimed; it was
 sized to permit policy selection without inspecting evaluation material, which it does.

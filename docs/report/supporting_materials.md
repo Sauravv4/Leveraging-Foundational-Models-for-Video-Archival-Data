@@ -587,7 +587,11 @@ short-form, and no single programme dominates it.
 
 ### Appendix D — Full Result Tables
 
-- **D.1** Frame-sampling ablation — paper Table III (*n* = 8).
+- **D.1** Frame-sampling ablation — paper Table III (*n* = 8). Note when citing the OCR column
+  that `aggregate_temporal_ocr` derives its persistence threshold from the frame count
+  (`required_frames = 1 if len(frame_outputs) == 1 else min(ocr_min_frame_occurrences, n)`), so
+  the centre-frame count is unfiltered and the other two are filtered at two occurrences. Only
+  the fixed-three and scene-aware figures are directly comparable.
 - **D.2** Perturbation robustness — paper Table IV (*n* = 5).
 - **D.3** Hosted-annotator ablation — paper Table V (*n* = 626).
 - **D.4** VLM benchmark — paper Table VI (*n* = 626, 21,489 scores).
