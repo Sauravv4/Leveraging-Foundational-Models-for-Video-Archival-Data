@@ -219,8 +219,10 @@ file, validates the resulting duration and atomically publishes it, so completed
 on re-runs and task completion order cannot perturb the dataset. The manifest is sorted
 deterministically before splitting.
 
-Sources — not clips — are split, 9 to calibration and 38 to evaluation, so no programme
-contributes clips to both sides. The calibration split is the only material inspected while
+Sources — not clips — are split, 9 programmes (123 clips) to calibration and 38 (503 clips) to
+evaluation, so no programme contributes clips to both sides. The split is a seeded permutation of
+the sorted source identifiers at a configured calibration fraction of 0.20, and is therefore
+deterministic across runs. The calibration split is the only material inspected while
 choosing sampling policy and thresholds.
 
 TABLE I. `[tablehead]` CORPUS AND SEGMENTATION
@@ -231,11 +233,16 @@ TABLE I. `[tablehead]` CORPUS AND SEGMENTATION
 | Clip length | 30.0 s (final fragment ≥ 2.0 s retained) |
 | Clips generated | 626 |
 | Clip creation failures | 0 |
-| Calibration / evaluation sources | 9 / 38 |
+| Calibration / evaluation programmes | 9 / 38 |
+| Calibration / evaluation clips | 123 / 503 (19.6% / 80.4%) |
 | Clips scored in the VLM benchmark | 626 |
-| Clips per programme (range) | 10 – 22 |
+| Clips per programme | 8 – 22 (mean 13.3, median 12, SD 3.1) |
+| Total clip duration | ≈ 5.2 h (upper bound) |
 
-> **`[TO FILL: total corpus duration in hours; mean and SD of clips per programme.]`**
+> **`[TO FILL: exact corpus duration. 626 × 30 s = 5.22 h is an upper bound, because the final
+> fragment of each of the 47 programmes may be shorter than 30 s (a 2.0 s floor is retained), so
+> the true figure lies between 4.85 h and 5.22 h. Sum the ffprobe durations of the source files
+> for the exact value.]`**
 
 ### B. Fields and Evidence Sources `[Heading2]`
 

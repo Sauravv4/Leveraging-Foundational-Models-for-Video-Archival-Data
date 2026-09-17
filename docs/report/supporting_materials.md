@@ -189,8 +189,9 @@ recursive discovery with deterministic sorting; exclusion of macOS sidecar files
 inspection before segmentation; 30-second segmentation with a 2.0-second minimum for the trailing
 fragment; per-clip duration validation; atomic publication.
 
-**Source-level splitting** was chosen over clip-level: 9 programmes to calibration, 38 to
-evaluation. Clip-level splitting would have leaked, because consecutive clips from one programme
+**Source-level splitting** was chosen over clip-level: 9 programmes (123 clips) to calibration,
+38 (503 clips) to evaluation — a 19.6% calibration share against the configured
+`calibration_fraction` of 0.20, since `round(47 × 0.20) = 9`. Clip-level splitting would have leaked, because consecutive clips from one programme
 share a studio, a caption template, a speaker and a lighting setup. Only the calibration split was
 inspected while choosing the sampling policy and thresholds.
 
@@ -257,8 +258,13 @@ verifies that the system does what it is specified to do.
 
 - No source contributes clips to both splits (enforced at source level, verifiable from the
   manifest).
+- Clip counts per split: calibration 123, evaluation 503, summing to 626. The split is assigned
+  by `assign_source_splits`, which seeds `np.random.default_rng(SEED)` and permutes a **sorted**
+  unique-identifier list, so it is deterministic across runs and independent of file discovery
+  order.
 - **`[TO FILL]`** Confirm programmatically that the intersection of source IDs across splits is
-  empty, and report the clip counts per split.
+  empty. The assignment builds one label per source so this should hold by construction, but it
+  is a one-line assertion and worth having in the record.
 
 ### 3.3 Determinism and Resumability
 
@@ -570,7 +576,13 @@ author's own and have been verified. Both exemplars carry this section; QUB requ
 
 47 programmes, NVTV, 2016. Subjects span festival launches, a fire-service industrial dispute,
 protest and parade footage, blue-plaque unveilings, political panels, arts and community-health
-programming, education and youth forums. Clips per programme range 10–22.
+programming, education and youth forums.
+
+Clips per programme range 8–22 (mean 13.3, median 12, SD 3.1), with most programmes at 11–13.
+The shortest are *REFRESH – PSNI Young Digital Team* (8) and *Adrian Ismay Vigil* (9); the longest
+are *Political Special* (22) and *Tourette Alliance First Annual Conference* (21). Because clips
+are a fixed 30 s, this distribution is a direct proxy for programme length: the corpus is
+short-form, and no single programme dominates it.
 **`[TO FILL: full table — title, duration, clip count, split.]`**
 
 ### Appendix D — Full Result Tables
