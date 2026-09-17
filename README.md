@@ -59,6 +59,15 @@ output/
 
 ---
 
+## Write-up
+
+The research paper and supporting-materials report are planned in
+[`docs/WRITING_GUIDE.md`](docs/WRITING_GUIDE.md), built from the exemplar
+submissions and the IEEE conference template kept in
+[`docs/references/`](docs/references/README.md).
+
+---
+
 ## Setup
 
 ### Prerequisites

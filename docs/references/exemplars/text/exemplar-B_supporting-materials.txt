@@ -1,0 +1,1657 @@
+LLM-Based Structured Extraction from 
+Clinical Dialogue: 
+An Evidence-Grounded Supporting Report 
+Supporting Report 
+Harivishnu Syamaladevi Kamaraj 
+Student number: 40494685 
+School of Electronics, Electrical Engineering and Computer Science 
+Queen's University Belfast 
+ECS8056 — MSc AI Themed Research Project 
+Supervisor: Dr. Awais Rauf 
+4 September 2026 
+ 
+ 
+
+Acknowledgements 
+Sincere thanks are owed to the project supervisor, Dr. Awais Rauf, for his guidance, feedback, and 
+support throughout the design, execution, and write-up of this project. Thanks, are also due to the School 
+of Electronics, Electrical Engineering and Computer Science at Queen's University Belfast for the 
+computing resources and academic support made available over the course of the MSc programme. This 
+report is written as a supporting account of the project's evidence package, complementing rather than 
+duplicating the fixed Research Paper submitted alongside it. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+Abstract 
+This supporting report documents, in full technical depth, the design, implementation, verification, and 
+critical appraisal of a study investigating how an open-source large language model can be adapted for 
+structured information extraction from clinical doctor-patient dialogue. Conversational text is informal, 
+multi-turn, and context-dependent, properties that extraction systems built for static documents do not 
+handle well. A custom, human-reviewed, 798-example benchmark was constructed from the MTS-
+Dialog corpus using Qwen3-8B as an annotator, with two competing automated quality-filtering 
+strategies trialled before a full human review pass. Four research questions were then tested against this 
+benchmark: whether LoRA fine-tuning outperforms zero- and few-shot prompting; whether explicit 
+annotation guidelines embedded in the fine-tuning prompt improve generalisation to clinical specialties 
+unseen during training; which of three structured output representations — JSON function-calling, 
+natural-language labels, or Python dataclass instances — minimises hallucination; and how extraction 
+performance degrades with conversational complexity and specialty unfamiliarity. Naive fine-tuning 
+produced a null result relative to prompting; guideline-conditioned fine-tuning produced a modest but 
+real improvement with reduced hallucination; JSON output decisively minimised hallucination against 
+the alternatives; and a measurable but partly artefactual generalisation gap was observed between seen 
+and unseen specialties. Beyond restating these results, this report additionally provides a mathematical 
+formulation of the extraction and scoring task, a full account of the project's life cycle and verification 
+methods, a justified inventory of every tool used, and an honest critical appraisal — including two 
+worked case studies, a disclosed AI-use statement, and an evidence index linking every reported claim 
+to its source artefact. 
+Keywords 
+Large Language Models; Information Extraction; LoRA Fine-Tuning; Conversational AI; Clinical 
+Natural Language Processing; Hallucination; Reproducibility. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+Contents 
+Chapter 1 — Introduction 
+1.1 Context and the Extraction Problem 
+1.2 Engineering Problem versus Scientific Problem 
+1.3 Research Question, Aim and Objectives 
+1.4 Contributions and Claim Boundaries 
+1.5 Report Map 
+Chapter 2 — Extended Literature Review 
+2.1 Scope and Taxonomy 
+2.2 On-Demand Information Extraction (ODIE) 
+2.3 Zero-Shot Dialogue State Tracking through Function Calling (FnCTOD) 
+2.4 InstructUIE 
+2.5 GoLLIE 
+2.6 Complementary Technical and Corpus Literature 
+2.7 Comparative Literature Matrix 
+2.8 Synthesis: Positioning and Novelty 
+Chapter 3 — Problem Statement and Mathematical Formulation 
+3.1 Task Definition 
+3.2 Structured Output Representations 
+3.3 Fuzzy Slot-Level F1 for List Fields 
+3.4 Token-Overlap F1 for Free-Text Fields 
+3.5 Macro-F1 
+3.6 Hallucination Rate 
+3.7 Constraints and Evaluation Objective 
+Chapter 4 — Proposed Methodology and System Design 
+4.1 End-to-End Pipeline Architecture 
+4.2 Annotation Prompt Design 
+4.3 Guideline-Conditioned Prompt Design for RQ2 
+4.4 Quality-Filtering Architecture 
+4.5 Model Architecture and LoRA Configuration 
+4.6 Training Procedure 
+Chapter 5 — Dataset, Implementation and Experimental Design 
+5.1 Accepted Dataset Facts 
+5.2 Preprocessing and Seeds 
+5.3 Implementation Environment 
+5.4 Experimental Protocol 
+5.5 Threats to Validity, Stated Before Results 
+Chapter 6 — Results and Critical Discussion 
+6.1 Baseline: Zero-Shot versus Few-Shot 
+6.2 Worked Example 1: Negation Handling and Its Limits 
+6.3 Worked Example 2: Self-Verification Catching a Temporal Attribution Error 
+6.4 RQ1 Results: Fine-Tuning versus Zero-/Few-Shot Prompting 
+6.5 RQ2 Results: Annotation-Guideline Ablation 
+6.6 RQ3 Results: Output-Format Comparison 
+6.7 RQ4 Results: Complexity-Tier and Generalisation Degradation 
+
+6.8 Supplementary Result: Model-Size Comparison 
+6.9 Comparison Against Anticipated Results 
+6.10 Integrated Answer to the Research Questions 
+Chapter 7 — Project Lifecycle, Tools, Verification and Validation 
+7.1 Research Lifecycle as Decisions 
+7.2 Tool Choices and Their Research Purpose 
+7.3 Verification and Provenance 
+7.4 Reproducibility Lessons 
+7.5 Interactive Verification: The Live Extraction Demo 
+Chapter 8 — Critical Appraisal, Ethics and AI Disclosure 
+8.1 What Worked and What Underperformed 
+8.2 Hindsight and Validity 
+8.3 Responsible AI, Fairness and Environmental Limits 
+8.4 AI Assistance and Student Responsibility 
+Chapter 9 — Conclusion and Future Work 
+9.1 Conclusion 
+9.2 Future Work 
+References 
+Appendix A — Evidence Index 
+Appendix B — Selected Reproducibility Notes 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+List of Figures 
+Figure 1. Taxonomy of the four core reviewed papers by source-text type (static vs. conversational) and 
+schema openness (closed vs. open-ended), with this project's position shown for comparison. 
+Figure 2. End-to-end pipeline architecture, from source corpus through benchmark construction to the 
+four parallel experimental tracks (baseline, RQ1/RQ2 fine-tuning, RQ3 format evaluation, RQ4 
+stratified analysis) and results aggregation. 
+Figure 3. Zero-shot vs. few-shot vs. fine-tuned macro-F1 on the unseen split (RQ1). 
+Figure 4. RQ3 macro-F1 by output format and prompting mode. 
+Figure 5. RQ3 hallucination rate by output format and prompting mode. 
+Figure 6. RQ3 structural validity (parse success rate) by output format and prompting mode. 
+Figure 7. Zero-shot macro-F1 by conversational difficulty tier. 
+Figure 8. Generalisation gap: zero-shot macro-F1, seen vs. unseen specialty. 
+Figure 9. The live Gradio extraction demo, showing a benchmark conversation extracted and scored 
+against its gold answer. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+List of Tables 
+Table 1. Comparative matrix of the four core reviewed papers by theme, evidence unit, and the 
+limitation each carries into this project's own design. 
+Table 2. Per-field annotation guidelines embedded in the RQ2 fine-tuning prompt. 
+Table 3. Composition of the locked benchmark (798 examples). 
+Table 4. Sub-specialty distribution across the 798-example benchmark. 
+Table 5. Hardware and software configuration for all reported experiments. 
+Table 6. Experimental protocol and evidence role per research question. 
+Table 7. Baseline Qwen3-8B zero-shot / few-shot macro-F1, all 798 items. 
+Table 8. Self-verification facts and verdicts for benchmark item ID 566. 
+Table 9. RQ1: zero-shot vs. few-shot vs. LoRA fine-tuned, unseen split (n = 89). 
+Table 10. RQ2: guideline-conditioned vs. non-guideline fine-tuning, unseen split (n = 89). 
+Table 11. RQ3: output-format comparison across all 798 items. 
+Table 12. Qwen3-1.7B vs. Qwen3-8B, all 798 items (not requested by the original plan). 
+Table 13. Anticipated vs. actual results, RQ1–RQ3. 
+Table 14. Tools used to support development, grouped by purpose. 
+Table 15. Primary evidence map and interpretation boundaries. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+Chapter 1 — Introduction 
+1.1 Context and the Extraction Problem 
+Information extraction (IE) — the transformation of unstructured text into structured, machine-
+actionable records — has traditionally assumed static, well-formed input: news articles, scientific 
+abstracts, legal filings. Conversational data violates every one of these assumptions. Utterances are 
+informal, incomplete, spread across multiple turns between speakers, and frequently rely on implicit 
+context — a symptom mentioned three turns earlier, referenced only as “it”; a question asked and then 
+answered with a bare “no”. This gap matters increasingly as organisations accumulate large volumes of 
+conversational data — clinical encounters, customer-service transcripts, voice-assistant logs — that 
+must be mined for structured, actionable content. A hospital needs a structured clinical summary from 
+a doctor-patient dialogue; the same underlying extraction problem recurs, in different clothing, across 
+every domain where humans talk rather than write. 
+Large language models have demonstrated substantial zero-shot IE capability, but this capability is 
+neither free nor uniform. GPT-3.5 achieves only 18.22 F1 on standard named-entity recognition without 
+task-specific adaptation [3], and zero-shot dialogue-state tracking trails fine-tuned models by 10–20 
+points on MultiWOZ [6], a benchmark built on the neural dialogue-systems paradigm established by 
+earlier pretrained-language-model approaches [5]. Conversational IE further compounds these 
+weaknesses: existing benchmarks evaluate entity, relation, intent, and event extraction largely in 
+isolation, and none jointly assesses all of these within the same multi-turn conversational context. This 
+project addresses that gap directly by evaluating LLM-based extraction on the highest-stakes 
+conversational setting available within its scope — clinical dialogue — where extraction errors carry 
+real consequences and where the tension between fine-tuning effort, prompt engineering, and 
+hallucination control is most acute. 
+1.2 Engineering Problem versus Scientific Problem 
+It is useful to separate what this project had to build from what it set out to discover. The engineering 
+problem is concrete: read a doctor-patient conversation, produce a structured extraction of its clinically 
+relevant content, and score that extraction against a human-verified gold standard. This project 
+implements that loop directly — an annotation pipeline, two competing quality-filtering strategies, a 
+LoRA fine-tuning pipeline, and a three-format evaluation harness (Chapter 4) — and every stage 
+produces an inspectable artefact (a JSON file, a CSV of scores, a saved adapter). 
+The scientific problem is different, and is the one the four research questions actually target: whether 
+small-scale parameter-efficient fine-tuning is worth its cost relative to prompting alone; whether a 
+specific, low-cost intervention (embedding annotation guidelines in the fine-tuning prompt) measurably 
+improves generalisation to specialties the model has never been fine-tuned on; which structured output 
+representation should be the default choice under a hallucination-sensitive evaluation standard; and how 
+much of an observed generalisation gap is a genuine model limitation versus an artefact of how the 
+benchmark itself is scored. Building a working extraction pipeline was necessary to answer these 
+questions, but it is not, on its own, the contribution — a pipeline that extracts structured facts without 
+establishing whether its adaptation strategy generalises, or whether its apparent gains survive a fair 
+comparison against a strong baseline, would not answer any of them. 
+1.3 Research Question, Aim and Objectives 
+The aim of this project is to determine how an open-source LLM can be reliably adapted — through 
+fine-tuning, prompt design, and output-format selection — to extract structured clinical facts from 
+
+doctor-patient conversation, and to characterise the conditions under which each adaptation strategy 
+succeeds or fails. Four objectives follow, each mapped directly to one research question addressed in 
+Chapter 6: 
+Establish whether parameter-efficient LoRA fine-tuning improves on zero-/few-shot prompting alone, 
+on a held-out specialty split (RQ1). 
+Establish whether explicit annotation guidelines, embedded in the fine-tuning prompt, improve 
+generalisation to specialties unseen during training (RQ2). 
+Establish which of three structured-output representations — JSON function-calling, natural-language 
+labels, or Python dataclass instances — best balances accuracy against hallucination (RQ3). 
+Characterise how extraction quality degrades with conversational complexity and specialty familiarity, 
+and how much of any observed gap is genuine versus a scoring artefact (RQ4). 
+The expected contribution is threefold: a human-verified, difficulty- and specialty-stratified 
+conversational IE benchmark for the clinical domain; a reusable evaluation harness scoring three 
+distinct structured-output formats against a single set of gold labels; and an honest empirical account of 
+where a small-scale, consumer-hardware LoRA fine-tuning pipeline does and does not outperform 
+prompting — including a genuine null result, reported rather than concealed. 
+1.4 Contributions and Claim Boundaries 
+Several boundaries are stated here explicitly, in the interest of the same methodological honesty this 
+report returns to throughout. This project makes no claim that its findings generalise beyond a single 
+clinical domain; no claim of superiority over a proprietary model, since no GPT-3.5/4 comparison was 
+run; no claim that its LoRA hyperparameters represent an optimum, since they were adopted from 
+literature defaults rather than searched; and no claim that the resulting system is suitable for autonomous 
+clinical documentation or decision-making — it is positioned strictly as a clinician-facing drafting aid 
+requiring mandatory human review (Chapter 8). Following a supervisor-approved scope review, the 
+project's original plan — spanning at least three domains, proprietary and literature-baseline 
+comparisons, and five research questions — was formally narrowed to a single domain and four 
+research questions (Chapter 7). These boundaries are the single largest limitation of the present work 
+and are revisited critically in Chapter 8, stated here as a scope decision rather than left implicit. 
+1.5 Report Map 
+Chapter 2 synthesises the project's literature basis into a critical, per-paper review and positions the 
+present work relative to the gap it leaves open. Chapter 3 defines the extraction task, the three output 
+representations, and every scoring metric mathematically, independent of any particular model or run. 
+Chapter 4 explains the proposed methodology and system design: the end-to-end pipeline architecture, 
+the annotation and guideline prompts actually used, and the model/training configuration. Chapter 5 
+records the accepted dataset, implementation, and experimental protocol in full detail, including threats 
+to validity stated before any result is presented. Chapter 6 presents results in the order the research 
+questions were posed, interprets them mechanistically, and includes two worked case studies drawn 
+directly from the benchmark. Chapter 7 reconstructs the project as a sequence of decisions, tool choices, 
+and verification steps. Chapter 8 appraises what worked, what did not, ethics, and discloses the AI 
+assistance used in preparing this report. Chapter 9 gives the conclusion and future work. References 
+and two appendices — an evidence index and selected reproducibility notes — close the report. 
+
+Chapter 2 — Extended Literature Review 
+The Research Paper submitted alongside this report compresses its own literature review to 
+approximately one page, as required by the module's writing-style rules for that deliverable. This 
+chapter provides the fuller investigation behind that compressed review: a complete critical treatment 
+of the four core papers underpinning this project's design, the supporting technical and corpus literature 
+it draws on, and a taxonomy that positions all four core papers — and this project — along two axes 
+that matter for conversational clinical extraction: whether the source text is static or conversational, and 
+whether the target schema is closed or open-ended. 
+2.1 Scope and Taxonomy 
+Ten sources are referenced throughout this project (this report's References list). Four form the core 
+methodological basis and are reviewed individually below; the remaining six supply the technical 
+foundations (LoRA, QLoRA, the Qwen3 model family) and corpus/context background (MTS-Dialog, 
+and the task-oriented dialogue literature the project's Introduction situates its motivating statistic 
+against). Figure 1 summarises where each core paper sits relative to this project along the two axes just 
+described. 
+ 
+Figure 1. Taxonomy of the four core reviewed papers by source-text type (static vs. conversational) and schema 
+openness (closed vs. open-ended), with this project's position shown for comparison. 
+Source: Report-only diagram, positions derived from each paper's stated task formulation. 
+ 
+2.2 On-Demand Information Extraction (ODIE) — Jiao et al., EMNLP 2023 [1] 
+Approach. Jiao et al. introduce On-Demand Information Extraction: a user supplies a natural-language 
+instruction describing what should be extracted, and the model returns the requested content as a 
+structured table, rather than being locked to one fixed extraction schema. The authors construct the 
+InstructIE dataset — 14,579 ChatGPT-generated training pairs spanning 61 domains, plus 150 human-
+annotated test examples — and fine-tune LLaMA-7B with LoRA in two variants: ODIE-Direct, which 
+
+emits the table immediately, and a chain-of-thought variant that reasons before emitting. Evaluation 
+combines Soft-Match F1 (via SentenceBERT similarity, so paraphrases are not penalised as harshly as 
+under exact-match F1), ROUGE-L, and human ratings. 
+Merit. ODIE-Direct outperforms comparable open-source baselines by roughly 5% and nearly matches 
+GPT-4 despite being two orders of magnitude smaller — a concrete existence proof that a small, LoRA-
+adapted open model can approach proprietary-model performance on structured extraction from free 
+text, which directly motivated this project's choice to attempt the same with Qwen3-8B rather than 
+assuming a large proprietary model would be required. 
+Weakness and gap. ODIE operates exclusively on static, single-author documents. Its six-step 
+ChatGPT-based data-generation pipeline has no mechanism for multi-turn context: it does not resolve 
+pronoun or ellipsis reference across turns, does not distinguish speakers, and has no notion of a fact 
+being confirmed versus merely raised and then denied — exactly the properties that make doctor-patient 
+dialogue harder than the news/Wikipedia-style text ODIE was evaluated on. 
+How this project differs. ODIE's six-step data-generation pipeline is the direct template this project 
+adapted for benchmark construction (Chapter 4), substituting Qwen3-8B for ChatGPT as the annotator 
+and multi-turn doctor-patient transcripts for ODIE's static source documents. Where ODIE's automated 
+filtering step is a single LLM pass, this project trialled two distinct filtering strategies before adding a 
+full human review pass — a more rigorous quality-control chain, made necessary precisely because 
+dialogue introduces the negation and misattribution failure modes that static-text extraction does not. 
+2.3 Zero-Shot Dialogue State Tracking through Function Calling (FnCTOD) — Li et al., 
+ACL 2024 [2] 
+Approach. Li et al. reframe dialogue-state tracking as a function-calling problem: each dialogue domain 
+is modelled as a distinct callable function, and the slot values the user has specified become that 
+function's arguments, with the model emitting a JSON function call. A two-step decomposition — select 
+the domain, then generate its arguments — shortens the prompt and improves accuracy. A version fine-
+tuned on 7,200 dialogues across 36 domains (FnCTOD-LLaMA2-13B) matches ChatGPT's zero-shot 
+DST performance and improves on GPT-4's average Joint Goal Accuracy by 14%. 
+Merit. FnCTOD is the paper in this review set most directly situated in the conversational domain, and 
+its function-calling framing gives a genuinely dialogue-native precedent for representing extracted state 
+as a structured, machine-parseable call rather than free text — exactly the property this project's RQ3 
+investigates for a different task. 
+Weakness and gap. FnCTOD's schema is closed and fixed: each function's argument set is a small, 
+enumerable slot vocabulary (cuisine type, price range, area). This suits task-oriented booking dialogue 
+but cannot express open-ended free-text fields — a clinical diagnosis or a doctor's recommendation 
+cannot be reduced to a small enumerable set of slot values without losing information. 
+How this project differs. FnCTOD's JSON function-call framing is the direct ancestor of this project's 
+JSON output condition in RQ3. The project's schema is deliberately hybrid: three list-valued fields 
+(symptoms, family_history, medications) behave like FnCTOD's closed slots, while two fields 
+(diagnosis, recommendation) are left as open free text — bridging FnCTOD's closed slot-value schema 
+and ODIE's fully open table extraction. 
+
+2.4 InstructUIE — Wang et al., arXiv 2023 [3] 
+Approach. Wang et al. unify named-entity recognition, relation extraction, and event extraction under 
+a single instruction-tuned FlanT5-11B model, jointly fine-tuned across 32 datasets. InstructUIE 
+achieves 85.19% average NER F1 against an 80.09% BERT baseline, outperforms GPT-3.5 zero-shot 
+on relation extraction, and generalises to seven NER domains never seen during its own fine-tuning. 
+Merit. InstructUIE's seven-domain zero-shot generalisation experiment is the direct precedent for this 
+project's seen/unseen specialty split and RQ4 generalisation analysis, demonstrating that instruction-
+tuned models can be evaluated meaningfully on generalisation to excluded categories, not merely in-
+distribution performance. 
+Weakness and gap. InstructUIE reports strong aggregate accuracy but no hallucination metric and no 
+comparison against a function-calling output representation — its own output format is natural-
+language, label-based text. Nor does it address dialogue. 
+How this project differs. InstructUIE's natural-language label output is the direct ancestor of this 
+project's “NL” output condition in RQ3. This project's finding that the NL-label format hallucinates 
+substantially more (33.8–58.0%) than a JSON function-calling alternative (7.5–9.7%) is a direct, 
+empirical extension of the evaluation gap InstructUIE itself leaves open. 
+2.5 GoLLIE — Sainz et al., ICLR 2024 [4] 
+Approach. Sainz et al. argue that LLMs should be trained to follow explicit annotation guidelines, not 
+just a bare task instruction. Guidelines are represented as Python dataclasses, with each field's docstring 
+carrying its definition and a commented worked example. Five regularisation techniques — class-order 
+shuffling, class dropout, guideline paraphrasing, candidate-label sampling, and class-name masking — 
+stop the model from memorising label names as shortcuts. GoLLIE 7B outperforms an 11B InstructUIE 
+by 13 F1 points on zero-shot benchmarks and hallucinates in under 1% of its predictions. 
+Merit. GoLLIE is the source of both the dataclass output format compared in RQ3 and the entire premise 
+of RQ2. Its near-1% hallucination rate is direct evidence that hallucination is not solely a function of 
+model size and can be engineered down. 
+Weakness and gap. GoLLIE is evaluated only on static news and biomedical text, never on dialogue, 
+so its central claim — that guideline-conditioning improves generalisation — had never been tested 
+against conversational, informally phrased input before this project's RQ2. Its 13-point improvement 
+also uses the full five-technique regularisation regime at 7B–34B scale on high-end hardware, a 
+materially larger investment than a single-consumer-GPU MSc project can reproduce. 
+How this project differs. RQ2 is a direct, deliberately simplified replication of GoLLIE's central claim 
+in a setting GoLLIE never tested: conversational clinical dialogue, using a single technique (guideline 
+text embedded in the fine-tuning prompt) rather than GoLLIE's full regularisation regime. The resulting 
++2.3-point gain is treated not as a failure to replicate, but as evidence — discussed in Chapter 6 — that 
+GoLLIE's larger reported gain likely reflects its additional regularisation machinery rather than 
+guideline text alone, a hypothesis this project's simpler ablation is well positioned to have surfaced 
+precisely because it isolates guideline presence as the sole variable. 
+2.6 Complementary Technical and Corpus Literature 
+Beyond the four core methodological papers reviewed above, six further sources supply the technical 
+and corpus foundations this project builds on directly. 
+
+Parameter-efficient fine-tuning. LoRA [7] freezes a pretrained model’s weights entirely and injects 
+small, trainable low-rank decomposition matrices into selected linear layers, reducing the number of 
+trainable parameters by orders of magnitude relative to full fine-tuning while retaining most of its 
+benefit — the technique underlying every fine-tuning run in this project (Chapter 4). QLoRA [8] 
+extends this further with 4-bit NF4 quantisation of the frozen base weights, together with double 
+quantisation and paged optimisers to control memory spikes during training. This is the specific 
+combination of techniques that made fine-tuning an 8-billion-parameter model feasible at all on a single 
+8 GB consumer laptop GPU: without QLoRA’s quantisation scheme, Qwen3-8B alone would not fit in 
+the available VRAM budget, let alone leave room for gradients and optimiser state. 
+Backbone model. The Qwen3 technical report [9] documents the architecture, training regime, and 
+reported benchmark performance of the model family used throughout this project, for both the 8B 
+backbone and the smaller 1.7B variant used in the supplementary model-size comparison (Section 6.8). 
+Its reported strong instruction-following at the 7–8B parameter scale is the direct justification for 
+selecting Qwen3-8B over a larger, less locally deployable alternative. 
+Source corpus. MTS-Dialog [10] is the project’s source corpus: a publicly released collection of 
+doctor-patient dialogue transcripts paired with human-written clinical summaries, built originally for 
+clinical note-generation research. This project repurposes those human-written summaries in a role their 
+original authors did not intend — as an independent cross-check during the self-verification quality-
+filtering pass (Chapter 4) — extracting additional evidentiary value from an existing, already-curated 
+resource rather than requiring separately collected ground truth. 
+Task-oriented dialogue paradigm. Budzianowski and Vulic [5] and the MultiWOZ 2.2 paper [6] 
+together establish the neural, pretrained-language-model paradigm for task-oriented dialogue systems 
+and the benchmark that paradigm is most commonly evaluated against. They are not sources this 
+project’s methodology is built on directly, but they supply the field-level context motivating its opening 
+claim: that zero-shot dialogue-state tracking trails fine-tuned models by a substantial, well-documented 
+margin on MultiWOZ, framing how large a fine-tuning-versus-prompting gap is typically expected to 
+matter in dialogue tasks generally. They also represent the kind of standard, multi-domain dialogue 
+benchmark this project’s original plan intended to incorporate before the scope was narrowed to a single 
+clinical domain (Chapter 7). 
+2.7 Comparative Literature Matrix 
+Table 1. Comparative matrix of the four core reviewed papers by theme, evidence unit, and the 
+limitation each carries into this project's own design. 
+Paper 
+What 
+it 
+predicts 
+/ 
+controls 
+Evidence unit 
+Limitation carried into 
+this project 
+ODIE [1] 
+User-instructed 
+open-
+schema table extraction 
+Static free text (news/web) 
+No multi-turn context; no 
+negation/attribution 
+handling needed on static 
+text 
+FnCTOD [2] 
+Closed-schema dialogue-
+state as a function call 
+Task-oriented dialogue 
+Cannot 
+express 
+open-
+ended 
+free-text 
+fields 
+(diagnosis, 
+recommendation) 
+
+InstructUIE [3] 
+Unified 
+NER/relation/event 
+extraction 
+Static text, 32 datasets 
+No hallucination metric; 
+NL-label 
+output 
+not 
+compared 
+against 
+a 
+structured alternative 
+GoLLIE [4] 
+Guideline-conditioned 
+zero-shot extraction 
+Static 
+news/biomedical 
+text 
+Never tested on dialogue; 
+full 
+5-technique 
+regularisation 
+not 
+reproducible 
+on 
+this 
+project's hardware budget 
+Source: Compiled from the four papers' own reported methods and evaluation sections. 
+ 
+2.8 Synthesis: Positioning and Novelty of the Present Work 
+Read together, the four core papers reveal a research space explored along individual axes but never 
+combined. ODIE and InstructUIE demonstrate that structured extraction and cross-domain 
+generalisation are achievable with fine-tuned open models, but neither addresses dialogue. FnCTOD 
+addresses dialogue directly and popularises function-calling as an output representation, but only within 
+closed, fixed slot schemas. GoLLIE addresses guideline-conditioning and output-format hallucination 
+control with the strongest results of the four, but only on static text. No existing work in this review 
+combines fine-tuning-versus-prompting comparison, guideline conditioning, and output-format 
+hallucination control within a single conversational, open-ended-field benchmark evaluated under 
+identical conditions. This project's contribution is precisely that combination, instantiated in a single 
+high-stakes domain, with RQ1 (informed by ODIE and FnCTOD), RQ2 (informed by GoLLIE), and 
+RQ3 (informed by all three output-format papers) tested on identical held-out data so their effects can 
+be compared directly against one another — something none of the four source papers' own, mutually 
+non-comparable benchmarks permits. 
+ 
+ 
+
+Chapter 3 — Problem Statement and Mathematical Formulation 
+This chapter defines the extraction task, the three structured output representations compared in RQ3, 
+and every scoring metric used throughout this report and the Research Paper, independent of any 
+particular model or experimental run. All definitions below are taken directly from the project's own 
+scoring implementation (common_extraction.py), so the equations reported here are the equations the 
+reported numbers were actually computed with, not a post-hoc restatement. 
+3.1 Task Definition 
+Let c denote a conversation: an ordered sequence of turns c = (u1, u2, …, un), where each turn ui is 
+attributed to either the doctor or the patient speaker role. Each conversation in the benchmark carries a 
+gold annotation g, a structured record over five fields: symptoms (a list of {name, duration, severity} 
+objects), family_history (a list of {relation, condition} objects), medications (a list of {name, dose, 
+frequency} objects), diagnosis (free text), and recommendation (free text). A model under evaluation, 
+given c and a format-specific prompt, produces a predicted record p over the same five fields. The 
+extraction task is to produce p such that every fact in p is (i) present in c, (ii) correctly attributed to the 
+patient rather than a third party, and (iii) not a fact the patient explicitly denied. 
+3.2 Structured Output Representations 
+Three surface representations of the same underlying record p are compared in RQ3, each with its own 
+parser in common_extraction.py: 
+JSON function-calling: p is emitted as a JSON object matching the five-field schema exactly, parsed 
+by regex-extracting the first balanced {...} block from the model's raw output and validating it with 
+json.loads. 
+Natural-language (NL) labels: p is emitted as delimiter-separated labelled lines (e.g. “symptoms: 
+headache (duration: two days, severity: severe); …”), parsed with a purpose-built delimiter parser 
+rather than a general-purpose format. 
+Python dataclass: p is emitted as a literal MedicalRecord(...) constructor call, parsed with a safe, non-
+evaluating AST visitor that walks the parsed syntax tree and reads back field values without 
+executing arbitrary code from model output. 
+Structural validity for a given output o is a binary indicator: valid(o) = 1 if the format-specific parser 
+returns a well-formed record, 0 (a parse failure) otherwise. Structural-validity rate over a set of N 
+outputs is the mean of valid(o) across that set. 
+3.3 Fuzzy Slot-Level F1 for List Fields 
+For each list-valued field (symptoms, family_history, medications), predicted items and gold items are 
+matched using token-Jaccard overlap rather than exact string equality, so a paraphrase (“kids” vs. 
+“children”) still counts as a match. For two strings a and b, let A and B be their normalised (lower-
+cased, punctuation-stripped) token sets. The fuzzy-match predicate is: 
+fuzzy_match(a, b) = 1  if  |A ∩ B| / |A ∪ B|  ≥  0.5,  else 0.        (1) 
+Matching proceeds greedily: each predicted item's key string (e.g. a symptom's name; a family-history 
+item's “relation condition” concatenation) is compared in order against all not-yet-matched gold items, 
+and the first fuzzy match found is consumed. Given true positives tp (matched pairs), precision = tp / 
+|predicted|, recall = tp / |gold|, and the field's F1 is the harmonic mean: 
+F1_field = 2 · precision · recall / (precision + recall).        (2) 
+
+3.4 Token-Overlap F1 for Free-Text Fields 
+The two free-text fields (diagnosis, recommendation) are scored with standard precision/recall over 
+normalised token sets, rather than the greedy item-matching used for list fields, since each is a single 
+string rather than a list of discrete facts: precision is the fraction of predicted tokens that also appear in 
+the gold text, recall is the fraction of gold tokens that also appear in the predicted text, and F1 is again 
+their harmonic mean (Equation 2). By convention, two empty strings score F1 = 1.0 (correctly 
+predicting “nothing stated”), while one empty and one non-empty string score F1 = 0.0. 
+3.5 Macro-F1 
+The headline comparison metric used throughout this project is macro-F1: the unweighted arithmetic 
+mean of the five per-field F1 scores for a given item, then averaged again across all items in the 
+evaluated set: 
+macro-F1 = (F1_symptoms + F1_family + F1_meds + F1_diagnosis + F1_recommendation) / 5.  (3) 
+Macro-F1 (rather than a token-count-weighted average) was chosen specifically so that a field with 
+typically shorter content, such as medications, is not swamped in the aggregate score by a field with 
+typically longer content, such as symptoms — each of the five clinical fact types is treated as equally 
+important to get right. 
+3.6 Hallucination Rate 
+Hallucination rate is defined as the fraction of predicted facts whose normalised tokens do not appear 
+anywhere in the source conversation's normalised token set. For a prediction p with extracted facts F = 
+{f1, …, fk} (every symptom name, family-history condition, medication name, plus the diagnosis and 
+recommendation strings, when non-empty), and conversation token set C: 
+hallucination_rate(p, c) = |{ f ∈ F : tokens(f) ∩ C = ∅ }| / |F|.        (4) 
+This is a grounding proxy, not a clinical-correctness check: a fact can be grounded (its tokens appear in 
+the conversation) while still being wrongly attributed or negated, which is why hallucination rate is 
+reported alongside, never instead of, macro-F1 throughout this project. 
+3.7 Constraints and Evaluation Objective 
+The evaluation objective is not simply to maximise macro-F1. It is to select an adaptation strategy — 
+prompting, fine-tuning, or fine-tuning with guidelines — and an output format whose macro-F1, 
+hallucination rate, and structural validity are jointly acceptable, and to characterise, rather than hide, 
+how that joint acceptability changes between specialties seen during any fine-tuning and specialties 
+held out entirely (RQ4). The mathematical formulation therefore keeps macro-F1, hallucination rate, 
+and structural validity as three separate reported quantities rather than collapsing them into one scalar, 
+so that a format or condition which trades one for another (as RQ3's few-shot interaction with 
+hallucination shows, Chapter 6) remains visible rather than averaged away. 
+Chapter 4 — Proposed Methodology and System Design 
+4.1 End-to-End Pipeline Architecture 
+The project is organised as one linear pipeline with a fork at the quality-filtering stage. Figure 2 shows 
+the full path: source corpus, LLM annotation, the two competing filtering strategies (one abandoned, 
+
+one adopted), human review, the locked benchmark, and the four parallel experimental tracks that 
+consume it. 
+ 
+Figure 2. End-to-end pipeline architecture, from source corpus through benchmark construction to the four parallel 
+experimental tracks (baseline, RQ1/RQ2 fine-tuning, RQ3 format evaluation, RQ4 stratified analysis) and results 
+aggregation. 
+Source: Report-only diagram, derived from the project's own notebook and script sequence (Annotation_Pipeline_Qwen3.ipynb 
+through RQ_Results_Summary.ipynb). 
+ 
+4.2 Annotation Prompt Design 
+Every benchmark item begins as a raw conversation passed to Qwen3-8B with an extraction prompt 
+engineered specifically to handle two recurring error types identified during early trial runs. The prompt 
+requires the model to attend to who each fact belongs to — the symptoms field is reserved strictly for 
+the patient's own current experience, never a family member's — and to negation: a symptom the doctor 
+asks about and the patient denies must not appear anywhere in the output. The operative rules, taken 
+directly from the deployed prompt, read: 
+“The 'symptoms' field is ONLY for things the patient THEMSELVES is currently experiencing... Do not 
+put a family member's condition, history, or behavior in 'symptoms' — even if it sounds like a symptom... 
+The doctor often asks about a symptom and the patient DENIES it... A denied/negated symptom means 
+the patient does NOT have it — do NOT include it.” 
+This exhibit is quoted directly from ANNOTATION_PROMPT in the project's own annotation 
+notebook, reproduced here as evidence that the negation- and attribution-handling described throughout 
+this report is a real, deployed constraint on the annotator, not a post-hoc description of desired 
+behaviour. 
+
+4.3 Guideline-Conditioned Prompt Design for RQ2 
+RQ2 tests whether embedding explicit, per-field annotation guidelines in the fine-tuning prompt — 
+rather than only a bare task instruction — improves generalisation to unseen specialties, replicating 
+GoLLIE's central claim [4] in a conversational setting GoLLIE itself was never tested on. The guideline 
+text actually used, taken directly from GUIDELINES_PROMPT in common_extraction.py, defines 
+each field as follows: 
+Table 2. Per-field annotation guidelines embedded in the RQ2 fine-tuning prompt. 
+Field 
+Guideline definition (verbatim) 
+symptom 
+Patient-reported complaint (not one they deny). name; 
+duration ("" if unstated); severity ("" if unstated). 
+family_history 
+A relative's condition, explicitly mentioned only — not 
+the patient's own. relation (e.g. "father"); condition. 
+medication 
+A drug currently taken or prescribed (not one 
+stopped/avoided). name; dose ("" if unstated); frequency 
+("" if unstated). 
+diagnosis 
+Clinician's stated diagnosis, free text, "" if none stated. 
+recommendation 
+Clinician's stated plan/advice, free text, "" if none given. 
+Source: common_extraction.py, GUIDELINES_PROMPT (verbatim field definitions). 
+ 
+This is the entire independent variable between the RQ1 (no-guidelines) and RQ2 (with-guidelines) 
+fine-tuning runs: identical 250-example training subsample (fixed seed = 42), identical LoRA 
+configuration, identical training arguments — only these per-field definitions are added to the prompt. 
+Isolating guideline presence as the sole variable is what allows RQ2's +0.023 macro-F1 / −1.5-point 
+hallucination result to be attributed to the guideline text itself, rather than confounded with any other 
+change. 
+4.4 Quality-Filtering Architecture 
+Two automated filtering strategies were implemented and trialled before human review, as shown in 
+Figure 2. The first, an NLI-based consistency check, converted each extracted fact into a natural-
+language claim (e.g. “The patient currently has {symptom}.”) and tested it against the conversation 
+using cross-encoder/nli-deberta-v3-base, flagging a fact when the classifier returned “contradiction” 
+above 0.5 confidence or “neutral” above 0.7 confidence. Run across all 800 items, this flagged 717 of 
+1,687 facts (42.5%) — on manual inspection, a substantial share of these were in fact correct, indicating 
+the classifier, trained on single-sentence premise/hypothesis pairs, generalised poorly to long, multi-
+turn medical dialogue where a fact stated early can be clarified or confirmed many turns later. 
+The second strategy, adopted in its place, uses Qwen3-8B itself as a verifier: for each item, every 
+extracted fact is listed and the model is asked to mark each TRUE or FALSE strictly against the 
+conversation, with explicit instructions to mark FALSE any fact that is unmentioned, explicitly denied, 
+or misattributed to the wrong person. This flagged 275 of 1,687 facts (16.3%) — a more plausible rate 
+on the same manual-inspection standard — and every flagged fact was then reviewed by hand, corrected 
+where necessary (most commonly negation errors and one misattribution case), and merged back into 
+the final benchmark. 
+
+4.5 Model Architecture and LoRA Configuration 
+The backbone model is Qwen3-8B [9], an open-source instruction-tuned decoder-only transformer, 
+selected for strong reported instruction-following at the 7–8B scale, open weights permitting full 
+gradient access unavailable with a proprietary API, and mature LoRA/PEFT tooling. The model is 
+loaded in 4-bit precision (NF4 quantisation with double quantisation, float16 compute) [8], the specific 
+choice that made loading and fine-tuning an 8-billion-parameter model feasible within an 8 GB VRAM 
+budget. A LoRA adapter [7] is attached to the four attention projection matrices (query, key, value, 
+output) with rank 16, scaling alpha 32, and dropout 0.05, training 15,335,424 of 8,206,070,784 
+parameters (0.187%) while leaving base weights frozen. Rank, alpha, and target-module selection 
+follow established LoRA and GoLLIE defaults [4], [7] rather than a project-specific search, a trade-off 
+discussed critically in Chapter 8. 
+4.6 Training Procedure 
+Training data for the RQ1 (no-guidelines) condition comprises 250 of the 709 seen examples, drawn 
+with a fixed random seed (42) for reproducibility. Each training example pairs the extraction prompt 
+with the gold JSON annotation as the target completion; prompt tokens are masked to label value −100 
+during tokenisation, so cross-entropy loss is computed exclusively over the target JSON completion, 
+not the input. Training uses a per-device batch size of 1 with gradient accumulation over 8 steps 
+(effective batch size 8), a single epoch, learning rate 2e-4, fp16 mixed precision, the paged 8-bit Adam 
+optimiser, and gradient checkpointing enabled throughout. For RQ2, an otherwise identical script 
+substitutes the guideline-augmented prompt (Section 4.3) for the plain extraction prompt, holding every 
+other hyperparameter fixed. 
+ 
+ 
+
+Chapter 5 — Dataset, Implementation and Experimental Design 
+5.1 Accepted Dataset Facts 
+The benchmark was constructed from 800 conversations sampled from the MTS-Dialog corpus [10], a 
+publicly available collection of doctor-patient dialogue transcripts developed for clinical note-
+generation research. After the annotation, filtering, and human-review stages described in Chapter 4, 
+the locked benchmark (benchmark_final_split.json) comprises 798 examples — two of the original 800 
+were dropped during review — stratified along three independent dimensions. 
+Table 3. Composition of the locked benchmark (798 examples). 
+Dimension 
+Breakdown 
+Total examples 
+798 
+Specialty split 
+Seen: 709 (88.8%)  |  Unseen: 89 (11.2%) 
+Difficulty tier 
+Easy: 299  |  Medium: 257  |  Hard: 242 
+Held-out specialties 
+Dermatology, Orthopedics (excluded from all fine-
+tuning) 
+Source: benchmark_final_split.json; RQ_Results_Summary.ipynb aggregate counts. 
+ 
+Table 4. Sub-specialty distribution across the 798-example benchmark. 
+Sub-specialty 
+n 
+Share 
+General medicine 
+266 
+33.3% 
+Cardiology 
+104 
+13.0% 
+ENT 
+94 
+11.8% 
+Gastroenterology 
+60 
+7.5% 
+Orthopedics (unseen) 
+59 
+7.4% 
+Neurology 
+51 
+6.4% 
+Endocrinology 
+35 
+4.4% 
+Dermatology (unseen) 
+30 
+3.8% 
+Pulmonology 
+26 
+3.3% 
+Mental health 
+22 
+2.8% 
+Gynecology 
+18 
+2.3% 
+Oncology 
+17 
+2.1% 
+Urology 
+16 
+2.0% 
+Source: Benchmark construction notebook aggregate counts (rough project review draft). 
+ 
+
+The 88.8/11.2 seen/unseen split and the two held-out specialties were fixed before any fine-tuning 
+experiment and reused, unchanged, across RQ1, RQ2, and RQ4, so generalisation results are directly 
+comparable across research questions. The imbalance visible in the sub-specialty table — general 
+medicine at 33.3% against oncology and urology at roughly 2% each — is revisited as a fairness concern 
+in Chapter 8. 
+5.2 Preprocessing and Seeds 
+Conversations are parsed from raw “Doctor:” / “Patient:” prefixed transcript text into a turn-structured 
+list before being passed to any prompt, so every downstream stage (annotation, verification, evaluation) 
+consumes the same turn representation. Random seed 42 is used consistently for the RQ1/RQ2 250-
+example training subsample, so the identical subsample underlies both fine-tuning conditions (Chapter 
+4). No additional resampling or held-out reshuffling was performed once the benchmark's seen/unseen 
+split was locked, to avoid any risk of test-set information leaking into a later model-selection decision. 
+5.3 Implementation Environment 
+Table 5. Hardware and software configuration for all reported experiments. 
+Component 
+Specification 
+GPU 
+NVIDIA RTX 5060 Laptop GPU (8 GB VRAM) 
+OS 
+Windows 11 
+PyTorch 
+2.11.0+cu128 (Blackwell sm_120 kernel support) 
+Transformers 
+5.15.0 
+PEFT 
+0.20.0 
+bitsandbytes 
+0.50.0 
+Base model 
+Qwen/Qwen3-8B and Qwen/Qwen3-1.7B (Hugging 
+Face) 
+Source: Verified via an explicit GPU matrix-multiplication smoke test, not version metadata alone (Section 5.5). 
+ 
+All experiments were run on this single local machine, following an initial migration away from free-
+tier Google Colab, whose shared GPU allocation proved unreliable for multi-hour fine-tuning runs. 
+Reported timings: RQ1 fine-tuning took approximately 42 minutes of training plus 39 minutes of 
+inference; RQ2 fine-tuning, after the fixes described in Section 5.5, took 108.9 minutes of training at 
+~100% GPU utilisation (~7.2 GB VRAM) plus 63.4 minutes of inference on the 89-item unseen split. 
+5.4 Experimental Protocol 
+Table 6. Experimental protocol and evidence role per research question. 
+RQ 
+Conditions compared 
+Evaluated on 
+Independent variable 
+Baseline 
+Zero-shot; 
+few-shot 
+(1 
+example) 
+All 798 items 
+Presence of a worked 
+example in the prompt 
+RQ1 
+Zero-shot; 
+few-shot; 
+LoRA 
+fine-tuned 
+(no 
+guidelines) 
+89-item unseen split 
+Prompting vs. fine-tuning 
+
+RQ2 
+Fine-tuned, no guidelines; 
+fine-tuned, with guidelines 
+89-item unseen split 
+Presence 
+of 
+per-field 
+guideline text (Section 4.3) 
+RQ3 
+JSON; NL labels; Python 
+dataclass, each zero-/few-
+shot 
+All 798 items 
+Output representation 
+RQ4 
+Zero-shot, 
+grouped 
+by 
+difficulty tier and specialty 
+split 
+All 798 items 
+Conversational difficulty; 
+specialty familiarity 
+Supplementary 
+Qwen3-1.7B vs. Qwen3-
+8B, zero-/few-shot 
+All 798 items 
+Model parameter count 
+Source: Baseline_Evaluation_Qwen3.ipynb; LoRA_Finetune_Qwen3.ipynb; run_format_eval.py; RQ_Results_Summary.ipynb. 
+ 
+5.5 Threats to Validity, Stated Before Results 
+Two classes of threat to validity are stated here, before any result is presented in Chapter 6, rather than 
+discovered retrospectively by a reader comparing tables. 
+Infrastructure threats 
+torch.cuda.is_available() returning True is not sufficient evidence that GPU computation will succeed: 
+one candidate environment reported CUDA availability while every real matrix multiplication crashed, 
+because the installed PyTorch build lacked compiled kernels for the RTX 5060's Blackwell (sm_120) 
+architecture. A second, separately maintained conda environment was found to hold a CPU-only 
+PyTorch build with none of transformers, peft, bitsandbytes, or datasets installed, despite being 
+recorded elsewhere as “working.” Both were caught by an explicit GPU matrix-multiplication smoke 
+test before any experiment in this report was trusted to have actually run on GPU. 
+Data and protocol threats 
+A tokenisation-length threat was diagnosed during the RQ2 training run: the longer guideline-
+augmented prompts caused 177 of 250 training examples (71%) to exceed the original 640-token cap, 
+silently truncating — and in some cases entirely discarding — the target JSON completion. This was 
+caught by auditing the tokenized length distribution directly and fixed by compacting the guideline text 
+and raising the cap to 768 tokens, restoring the truncation rate to 8% (20/250), matching the original 
+RQ1 run's rate on the same metric. A second threat concerns sample size: the RQ1/RQ2 headline 
+comparisons rest on only 89 unseen items, and no formal significance test has yet been run on the 
+observed deltas (Chapter 8); a 1–2-point macro-F1 difference on this sample should be read as 
+suggestive, not conclusive, until that validation is performed. A third threat concerns correlated bias: 
+the initial annotation and the self-verification quality-filtering pass (Chapter 4) both use the same 
+Qwen3 model family, so a systematic bias in how that model perceives a given specialty's terminology 
+could, in principle, be encoded into the gold labels themselves rather than caught by a genuinely 
+independent check. The subsequent human review pass mitigates, but does not eliminate, this risk. 
+Chapter 6 — Results and Critical Discussion 
+6.1 Baseline: Zero-Shot versus Few-Shot 
+Table 7. Baseline Qwen3-8B zero-shot / few-shot macro-F1, all 798 items. 
+
+Field 
+Zero-shot F1 
+Few-shot F1 
+Symptoms 
+0.8171 
+0.8091 
+Family history 
+0.8339 
+0.8317 
+Medications 
+0.9632 
+0.9571 
+Diagnosis 
+0.7429 
+0.8560 
+Recommendation 
+0.7563 
+0.8165 
+Macro average 
+0.8227 
+0.8541 
+Source: evaluation_results_zeroshot.csv; evaluation_results_fewshot.csv. Parse failures: 3/798 (0.4%) zero-shot, 1/798 (0.1%) few-
+shot. 
+ 
+This is the starting point every other condition in this chapter is compared against: can the base model 
+perform the extraction task at all, with no fine-tuning? The answer is yes, reasonably well — 0.823 
+macro-F1 zero-shot, rising to 0.854 with a single worked example. Medications is the easiest field 
+(0.96+ in both modes, likely because drug names are lexically distinctive and rarely ambiguous); 
+diagnosis and recommendation are the fields that benefit most from a worked example (+0.11 and +0.06 
+F1 respectively), consistent with these being the two free-text fields where a model has the most latitude 
+to phrase things differently from the gold label. 
+6.2 Worked Example 1: Negation Handling and Its Limits 
+The following case study, drawn directly from the annotation pipeline's own recorded output for 
+benchmark item ID 34, illustrates both the negation-handling rule working as intended and a residual 
+limitation it did not fully resolve. 
+Conversation (verbatim): 
+DOCTOR: Have you lost weight? / PATIENT: No, I haven't, you can ask my daughter. / DOCTOR: 
+How about anything like fever, nausea, vomiting, pain? / PATIENT: No. / DOCTOR: And as we 
+discussed you have problem talking and comprehending. / PATIENT: Yes. / DOCTOR: And you get 
+urine infections too? / PATIENT: Yes. / DOCTOR: And as discussed, your drainage is similar to past 
+episodes when you had such infection? / PATIENT: Yes. 
+Recorded annotation output: 
+symptoms: [{"name": "difficulty talking and comprehending", "duration": "similar to past episodes", 
+"severity": "not specified"}]; family_history: [{"relation": "daughter", "condition": "weight loss"}]; 
+medications: []; diagnosis: ""; recommendation: "". 
+The negation rule worked correctly in one respect: “weight loss” — explicitly denied by the patient 
+(“No, I haven't”) — was correctly excluded from the symptoms field, where a naive extractor would 
+otherwise have recorded it simply because the word appeared in the doctor's question. However, the 
+annotation still shows a residual artefact: the denied weight loss was folded into family_history, 
+attributed to “daughter,” apparently because the patient's aside (“you can ask my daughter”) was 
+misread as introducing a fact about the daughter rather than merely offering a witness to confirm the 
+patient's own denial. The annotation also misses two facts the patient explicitly confirmed — urine 
+infections and drainage similar to past episodes — which do not appear anywhere in the recorded output. 
+This example is included here, rather than a cleaner one, specifically because the project's own critical-
+
+appraisal standard (Chapter 8) is to report evidence of residual error alongside evidence of success, 
+rather than present only favourable cases. 
+6.3 Worked Example 2: Self-Verification Catching a Temporal Attribution Error 
+This second case study, drawn from the self-verification pass's own recorded output for benchmark item 
+ID 566, illustrates the specific class of error self-verification is designed to catch — one that negation-
+only rules cannot. 
+Conversation excerpt (verbatim): 
+DOCTOR: When was your last stroke? / PATIENT: Well, it was on January seventeenth. I had these 
+episodes where I was like always so confused and looks like I lost everything. All my memory and 
+everything. And then they did a scan. It was verified that I was having a stroke on the same day. / 
+DOCTOR: Did they put you on some medications? / PATIENT: They gave me an anticonvulsant and 
+aspirin. / [...] / DOCTOR: Do you feel anything else along with these episodes... any kind of weakness 
+or numbness or shortness of breath? / PATIENT: No nothing else, just the confusion and forgetfulness. 
+Facts sent for self-verification, and Qwen3-8B's verdicts: 
+Table 8. Self-verification facts and verdicts for benchmark item ID 566. 
+# 
+Fact sent for verification 
+Verdict 
+1 
+The patient currently has: confusion 
+TRUE 
+2 
+The 
+patient 
+currently 
+has: 
+forgetfulness 
+TRUE 
+3 
+The patient currently has: episodic 
+confusion and memory loss 
+TRUE 
+4 
+The patient takes/took: aspirin 
+TRUE 
+5 
+The 
+patient 
+takes/took: 
+dyphenhydramine 
+TRUE 
+6 
+The patient's diagnosis is: stroke 
+FALSE 
+Source: Qwen_self_verification.ipynb, recorded raw verification response for item ID 566. 
+ 
+The verifier flagged “stroke” as FALSE for the diagnosis field even though the patient does state a 
+stroke was “verified” by a scan. The distinction the verifier appears to be drawing — correctly, on 
+inspection — is temporal: the confirmed stroke belongs to a past episode (“last stroke... on January 
+seventeenth”) being recounted as history, not a diagnosis made during the conversation being annotated, 
+whose actual subject is the patient's recurring confusion/forgetfulness episodes. This is exactly the class 
+of error a simple negation check cannot catch, because nothing in the sentence is denied — the problem 
+is temporal and contextual attribution, not polarity. It is offered here as concrete evidence for why the 
+self-verification approach, despite being a coarser tool than the abandoned NLI classifier on paper, 
+outperformed it in practice: it can reason about context an entailment classifier trained on isolated 
+sentence pairs cannot. 
+6.4 RQ1 Results: Fine-Tuning versus Zero-/Few-Shot Prompting 
+Table 9. RQ1: zero-shot vs. few-shot vs. LoRA fine-tuned, unseen split (n = 89). 
+
+Condition 
+n 
+Macro-F1 
+Zero-shot 
+89 
+0.756 
+Few-shot 
+89 
+0.776 
+Fine-tuned (LoRA, no guidelines) 
+89 
+0.757 
+Source: finetune_comparison_summary.csv. 
+ 
+ 
+Figure 3. Zero-shot vs. few-shot vs. fine-tuned macro-F1 on the unseen split (RQ1). 
+Source: figures/finetune_comparison.png, generated by RQ_Results_Summary.ipynb. 
+ 
+Fine-tuning essentially matched zero-shot prompting (+0.001 F1) and underperformed few-shot 
+prompting (−0.019 F1) on the unseen split — a genuine null result relative to the project plan's 
+anticipated 5–15-point improvement, informed by ODIE's ~5.4% gain and FnCTOD's pattern of fine-
+tuned models matching ChatGPT. It is reported here as a null result rather than reframed, because the 
+practical conclusion it supports — that a small example budget may be better spent as few-shot context 
+than as fine-tuning data — is itself a concrete, actionable finding, discussed further in Section 6.10 and 
+Chapter 8. 
+6.5 RQ2 Results: Annotation-Guideline Ablation 
+Table 10. RQ2: guideline-conditioned vs. non-guideline fine-tuning, unseen split (n = 89). 
+Condition 
+n 
+Macro-F1 
+Hallucination 
+Zero-shot 
+89 
+0.756 
+– 
+Few-shot 
+89 
+0.776 
+– 
+Fine-tuned, no guidelines 
+89 
+0.757 
+12.8% 
+Fine-tuned, 
+with 
+guidelines 
+89 
+0.780 
+11.2% 
+
+Source: rq2_guidelines_comparison_summary.csv. 
+ 
+Adding the per-field guideline text shown in Section 4.3 to the fine-tuning prompt improved macro-F1 
+by +0.023 and reduced hallucination by 1.5 percentage points on the unseen split — the best-performing 
+condition observed across RQ1 and RQ2 combined, though more modest than the 8–13-point 
+improvement GoLLIE reports for its own, more heavily regularised regime [4]. Because the guideline 
+text is the sole variable changed between this condition and the RQ1 fine-tuned condition (Section 4.3), 
+this gain can be attributed specifically to guideline presence rather than to any confound in training 
+data, LoRA configuration, or training arguments. 
+6.6 RQ3 Results: Output-Format Comparison 
+Table 11. RQ3: output-format comparison across all 798 items. 
+Format / mode 
+Struct. valid. 
+Halluc. rate 
+Macro-F1 
+JSON, zero-shot 
+99.6% 
+9.7% 
+0.823 
+JSON, few-shot 
+99.9% 
+7.5% 
+0.854 
+NL labels, zero-shot 
+99.7% 
+33.8% 
+0.592 
+NL labels, few-shot 
+100.0% 
+58.0% 
+0.429 
+Dataclass, zero-shot 
+98.2% 
+12.1% 
+0.747 
+Dataclass, few-shot 
+98.6% 
+26.1% 
+0.680 
+Source: rq3_format_comparison_summary.csv. 
+ 
+ 
+Figure 4. RQ3 macro-F1 by output format and prompting mode. 
+ 
+
+ 
+Figure 5. RQ3 hallucination rate by output format and prompting mode. 
+ 
+ 
+Figure 6. RQ3 structural validity (parse success rate) by output format and prompting mode. 
+ 
+JSON wins decisively on every metric — highest structural validity, lowest hallucination rate, and 
+highest macro-F1 in both prompting modes — matching the project plan's anticipated result exactly. 
+The most striking secondary finding is the divergent effect of a worked example on hallucination: 
+adding one reduces JSON's hallucination rate (9.7% → 7.5%) but increases it sharply for NL labels 
+(33.8% → 58.0%) and dataclass (12.1% → 26.1%). A plausible mechanism is that JSON's rigid, 
+template-like grammar constrains what the example can teach the model to do — essentially only which 
+facts to extract — whereas the freer generation spaces of NL labels and dataclass syntax let the example 
+also teach a pattern of elaboration, which the model then applies even where the conversation does not 
+support it. This interaction is not reported in any of the four core reviewed papers and is flagged as a 
+concrete direction for follow-up mechanistic investigation. 
+
+6.7 RQ4 Results: Complexity-Tier and Generalisation Degradation 
+ 
+Figure 7. Zero-shot macro-F1 by conversational difficulty tier. 
+ 
+ 
+Figure 8. Generalisation gap: zero-shot macro-F1, seen vs. unseen specialty. 
+ 
+Zero-shot macro-F1 falls from 0.906 (Easy, n = 299) to 0.828 (Medium, n = 257) to 0.714 (Hard, n = 
+242) — a monotonic, 19-point decline across the three difficulty tiers, consistent with the intuitive 
+expectation that longer, more ambiguous, or more multi-topic conversations are harder to extract from 
+correctly. Separately, seen-specialty zero-shot macro-F1 (0.831) exceeds unseen-specialty macro-F1 
+(0.756) by 7.5 points. A manual review of the 30 lowest-scoring unseen examples classified 37% as 
+scoring artefacts (ambiguous blank gold labels, singular/plural mismatches penalised by the exact-token 
+matching underlying the fuzzy-F1 metric), 50% as genuine extraction misses, and 13% as mixed. The 
+refined finding is that the true generalisation gap is smaller than the raw 7.5-point figure suggests, but 
+
+a real gap remains, concentrated in incomplete symptom lists and missed recommendations on the two 
+unseen specialties. 
+6.8 Supplementary Result: Model-Size Comparison 
+Table 12. Qwen3-1.7B vs. Qwen3-8B, all 798 items (not requested by the original plan). 
+Model 
+Zero-shot F1 
+Few-shot F1 
+Qwen3-1.7B 
+0.772 
+0.773 
+Qwen3-8B 
+0.823 
+0.854 
+Source: model_size_comparison_summary.csv. 
+ 
+This comparison, added beyond the original plan's scope as a low-cost extension of the existing 
+evaluation harness, quantifies the capability cost of a roughly 4.7x smaller model: a 5.1-point (zero-
+shot) to 8.1-point (few-shot) macro-F1 reduction. Notably, the smaller model gains almost nothing from 
+a worked example (+0.001 F1) where the 8B model gains +0.031 — a plausible in-context-learning-
+capacity effect worth flagging for any future deployment cost/accuracy trade-off discussion, though not 
+one this project's scope permits investigating further. 
+6.9 Comparison Against Anticipated Results 
+Table 13. Anticipated vs. actual results, RQ1–RQ3. 
+RQ 
+Anticipated 
+Actual 
+RQ1 
++5 to +15 F1 pts over prompting 
++0.001 pt (null result) 
+RQ2 
++8 to +13 F1 pts 
++2.3 pts (real, modest) 
+RQ3 
+JSON: 
+lowest 
+halluc., 
+highest 
+validity 
+Confirmed exactly 
+Source: Project plan expectations vs. rq*_summary.csv results. 
+ 
+RQ3's confirmation is unsurprising given its constrained, template-driven generation space. RQ1 and 
+RQ2's shortfall against expectation is the more informative result, and is discussed critically in Chapter 
+8; the leading hypothesis is that 250 examples for a single epoch under-trains the adapter relative to the 
+700–7,200-example, multi-epoch regimes reported in ODIE, FnCTOD, and GoLLIE — a hypothesis 
+this project's compute budget did not permit testing directly, but which is proposed as a concrete, 
+falsifiable direction for future work (Chapter 9). 
+6.10 Integrated Answer to the Research Questions 
+Taken together, the evidence in this chapter answers each research question, but with boundaries that 
+must be stated alongside the answer rather than after it. RQ1: naive LoRA fine-tuning on 250 examples 
+does not outperform few-shot prompting on this benchmark — a negative result, not a null instrument, 
+since the same pipeline detects a real, positive effect in RQ2 under an otherwise identical protocol. 
+RQ2: embedding explicit annotation guidelines in the fine-tuning prompt produces a small but real, 
+directionally consistent improvement in both accuracy and grounding, at effectively zero additional 
+compute cost — the project's most actionable finding for a practitioner operating under a similarly 
+constrained data and hardware budget. RQ3: JSON function-calling output should be the default 
+
+structured-output choice for a hallucination-sensitive extraction task, unambiguously, on every metric 
+measured. RQ4: extraction quality degrades meaningfully with conversational difficulty, and a real, if 
+partly artefactual, generalisation gap exists between clinical specialties represented during fine-tuning 
+and specialties held out entirely — a gap this project's manual error review, rather than the raw 
+aggregate metric alone, was needed to characterise honestly. 
+ 
+ 
+
+Chapter 7 — Project Lifecycle, Tools, Verification and Validation 
+7.1 Research Lifecycle as Decisions 
+The project began with a supervisor-approved project plan specifying an ambitious original scope: a 
+conversational information-extraction benchmark spanning at least three domains (healthcare, customer 
+support, e-commerce), comparison against proprietary baselines (GPT-3.5, GPT-4) and three literature 
+baselines (InstructUIE, GoLLIE 7B, FnCTOD-LLaMA2-13B), and five research questions. Following 
+a formal scope review with the supervisor, the plan's boundaries were explicitly narrowed: the domain 
+was restricted to healthcare dialogue only, sourced from MTS-Dialog; the standard multi-domain 
+comparison datasets (MultiWOZ 2.2, Schema-Guided Dialogue, IE INSTRUCTIONS) were dropped; 
+no proprietary-model comparison was run, owing to the absence of an API budget; no literature-baseline 
+reproduction was attempted, owing to the 8 GB GPU budget and the fact that two of the three literature 
+baselines are themselves larger than Qwen3-8B; and a fifth research question (joint multi-format 
+generalisation) was formally dropped, consistent with the plan's own risk-mitigation register, which 
+permitted dropping RQ4/RQ5 once RQ1–RQ3 were judged solid. 
+Development then proceeded through the benchmark-construction stage described in Chapter 4: 800 
+conversations sampled and annotated, two competing filtering strategies trialled (one abandoned after 
+inspection, the other adopted), a full human review pass, and a locked, stratified benchmark. Four 
+parallel experimental tracks were then implemented against that locked benchmark — baseline 
+evaluation, LoRA fine-tuning (RQ1, then RQ2), the three-format evaluation harness (RQ3), and the 
+stratified RQ4 analysis — each producing a saved CSV of scores consumed unmodified by the final 
+results-aggregation notebook. A hard submission deadline of 4 September 2026 was confirmed by the 
+module supervisor, together with the requirement to prepare a Research Paper, this Supporting Report, 
+a recorded presentation, and code as four separate final deliverables. 
+7.2 Tool Choices and Their Research Purpose 
+Table 14. Tools used to support development, grouped by purpose. 
+Tool 
+Purpose / relevance 
+NVIDIA RTX 5060 Laptop GPU (8 GB VRAM) 
+Local GPU for all fine-tuning and inference; its VRAM 
+budget directly shaped the 4-bit quantisation, LoRA rank, 
+and batch-size choices in Chapter 4. 
+Local Windows 11 machine 
+Replaced free-tier Google Colab after Colab's shared, 
+unpredictable GPU allocation proved unreliable for 
+multi-hour fine-tuning runs. 
+Qwen3-8B / Qwen3-1.7B (Hugging Face) 
+The primary backbone model and its smaller variant, 
+used 
+for 
+annotation, 
+self-verification, 
+baseline 
+evaluation, and every fine-tuning run. 
+cross-encoder/nli-deberta-v3-base 
+The first, ultimately abandoned, annotation-quality-
+filtering strategy (Chapter 4). 
+PyTorch 2.11.0+cu128 
+Core tensor/autograd framework; this exact build was 
+required for compiled GPU kernels on the RTX 5060's 
+Blackwell architecture. 
+Hugging Face transformers (5.15.0) 
+Model/tokenizer loading, chat-template application, and 
+text generation for every Qwen3 call in the project. 
+
+Hugging Face peft (0.20.0) 
+LoRA adapter implementation, adapter save/load, and 
+the final RQ2-adapter-to-base-model merge. 
+bitsandbytes (0.50.0) 
+4-bit NF4 quantisation with double quantisation, the 
+technique that made an 8B-parameter model fit an 8 GB 
+GPU. 
+Hugging Face datasets 
+Dataset formatting and batching for the fine-tuning loop. 
+pandas 
+CSV loading and aggregation throughout — every table 
+in Chapter 6 is computed from a pandas groupby/mean 
+over a saved evaluation_results_*.csv file. 
+Python standard library (json, re, ast) 
+json for benchmark/prediction I/O; re for regex JSON 
+extraction; ast for a safe, non-evaluating dataclass parser. 
+common_extraction.py (custom module) 
+The project's own shared scoring module, imported 
+unchanged by every scoring script so JSON, NL, and 
+dataclass outputs are scored by identical logic against 
+identical gold labels. 
+matplotlib 
+Every chart in figures/ and this report was produced with 
+matplotlib, chosen for direct, scriptable control tracing 
+every chart back to its source CSV. 
+openpyxl 
+Programmatic construction of the human-evaluation 
+rating sheet, including a data-validation dropdown 
+constraining ratings to the rubric's four valid levels. 
+scipy.stats 
+Pearson/Spearman/Kendall correlation, intended to 
+validate the automatic fuzzy-F1 metric against human 
+ratings once collected (Section 7.4). 
+Microsoft Word (conference-template-a4 template) 
+Authoring tool for the Research Paper, using the IEEE-
+style two-column conference template supplied for this 
+module. 
+Gradio 
+Framework for the project's live interactive 
+extraction demo (gradio_demo.py), used to 
+visually verify RQ2 model behaviour against 
+benchmark gold labels outside the aggregation 
+notebook. 
+ 
+7.3 Verification and Provenance 
+Verification was treated as an explicit step at three separate points in the life cycle, rather than a single 
+end-of-project check. 
+Data verification: raw LLM-generated annotations were verified twice, by two independent methods 
+(NLI entailment, then LLM self-verification), before a full human review pass verified every fact 
+either method flagged as uncertain — 275 flagged facts out of 1,687, rather than a full manual re-
+annotation of all 1,687. 
+Infrastructure verification: GPU computation was verified with an explicit matrix-multiplication smoke 
+test rather than trusted from torch.cuda.is_available() alone, after this exact assumption was found 
+
+false in one environment (Chapter 5). Token-length truncation was verified by auditing the 
+tokenized length distribution of the RQ2 training set directly. 
+Result verification: every headline figure reported in Chapter 6 and the Research Paper was re-derived 
+directly from the project's saved CSV files by the results-aggregation notebook at the point of 
+writing, rather than carried over by hand from an earlier draft. 
+Cross-condition validation: RQ1 and RQ2 share an identical 250-example training subsample (fixed 
+seed = 42), identical LoRA configuration, and identical training arguments, differing only in 
+whether the prompt includes guideline text — a controlled ablation design chosen specifically so 
+RQ2's result could be attributed to guideline presence alone. 
+7.4 Reproducibility Lessons 
+A stratified 60-item human-evaluation package (rating sheet with a 4-level rubric adapted from ODIE, 
+a separately kept answer key, and a correlation-scoring script) was built specifically to validate the 
+automatic fuzzy-F1 metric against independent human judgement. This step was not completed at the 
+time of writing and is reported here as an open limitation rather than omitted silently — a decision 
+consistent with this report's wider policy of naming an incomplete or failed step explicitly rather than 
+letting a tidy narrative erase it. The main reproducibility lesson carried forward is to make failure states 
+first-class: the abandoned NLI-filtering run and its 717-fact flag list remain on disk rather than deleted, 
+the RQ2 truncation bug's before/after token-length distributions remain available, and the incomplete 
+human-evaluation package's built infrastructure (rating sheet, rubric, scoring script) is reported as built-
+but-unused rather than not mentioned. 
+7.5 Interactive Verification: The Live Extraction Demo 
+Beyond the results-aggregation notebook (Section 7.3), the project also provides a live, interactive 
+verification surface: gradio_demo.py, a browser-based application built on the Gradio framework 
+(Section 7.2, Table 14). The demo loads the RQ2 guideline-fine-tuned adapter after merging it into the 
+Qwen3-8B base weights via merge_lora_adapter.py, and lets a reviewer select any of the 798 
+benchmark conversations by clinical section category, run extraction against it, and watch the model's 
+structured output stream token-by-token as it is generated, rather than only as a finished block. On 
+completion, the demo scores the output with common_extraction.py — the identical scoring module 
+that produced every headline figure in Chapter 6 — computing per-field F1 against the conversation's 
+gold annotation and its hallucination rate. 
+This closes the loop between the static tables reported above and a reproducible, inspectable instance 
+of the same pipeline: a reviewer can verify, on demand, that the reported RQ2 metrics correspond to 
+real model behaviour on genuine benchmark items rather than to the aggregation notebook's output 
+alone. Figure 9 shows the interface after extracting a family-history conversation (benchmark item 9): 
+the model's live-streamed output, the parsed JSON extraction, and the resulting per-field F1 and 
+hallucination-rate scores against the benchmark's own gold answer. A screen recording of this demo in 
+live operation forms part of the video presentation submitted alongside the Research Paper and this 
+Supporting Report. 
+
+ 
+Figure 9. The live extraction demo interface (gradio_demo.py), showing the category/conversation pickers, streamed 
+model output, parsed JSON extraction, and per-field F1 / hallucination-rate scoring against the benchmark gold 
+answer. 
+Chapter 8 — Critical Appraisal, Ethics and AI Disclosure 
+8.1 What Worked and What Underperformed 
+The strongest parts of this project are the separation of evidence layers, the explicit comparison between 
+an abandoned and an adopted quality-filtering method (rather than presenting only the method that was 
+kept), the decisive and literature-confirming RQ3 result, and the honest reporting of RQ1's null result. 
+The 798-example benchmark is genuinely human-verified, not purely LLM-generated: every fact 
+flagged by either filtering pass was reviewed and, where necessary, corrected by hand. The RQ2 adapter 
+was also successfully fused into the base model's weights, producing a complete, standalone model that 
+loads and runs inference directly with no separate PEFT adapter required at inference time — a working, 
+runnable artefact of the project's fine-tuning work. 
+The underperforming part is fine-tuning itself, relative to what the project plan anticipated. RQ1's near-
+zero gain over zero-shot prompting, and its shortfall against few-shot prompting, means the compute 
+and engineering investment in the base fine-tuning pipeline did not pay off in isolation — it took the 
+
+additional, low-cost guideline-conditioning intervention in RQ2 to produce a real, positive result. Scale-
+down in scope also cost the project its originally intended competitive framing: with no proprietary or 
+literature-baseline comparison, every result in this project is Qwen-internal, and the human-evaluation 
+validation package, though fully built, was not completed in time to validate the automatic metric it was 
+designed to check. 
+8.2 Hindsight and Validity 
+With hindsight, three process changes would likely have strengthened this project most. First, 
+environment and infrastructure verification (GPU compute, tokenisation limits) should have been built 
+as an automated pre-flight check run before every experiment, rather than discovered reactively after a 
+run failed or silently misbehaved — both incidents in Chapter 5 were caught by manual inspection 
+prompted by suspicion, not by a standing check that would catch a similar issue automatically next 
+time. Second, even a lightweight 2–3-point hyperparameter sensitivity check, short of a full search, 
+would have let RQ1's null result be interpreted with more confidence as a genuine ceiling effect rather 
+than a possible artefact of under-training. Third, the human-evaluation package should have been 
+scheduled earlier in the project timeline, budgeted as its own milestone with dedicated time set aside, 
+rather than treated as a final step to complete once every other experiment was finished — a sequencing 
+choice that is the direct reason it remains incomplete. 
+On validity specifically: internal validity is improved, but not fully resolved, by the controlled 
+RQ1/RQ2 ablation design and the complete-container-style seen/unseen split constructed before any 
+fine-tuning run. Construct validity is limited by the fuzzy-F1 metric's own design choices (Chapter 3) 
+— a metric built to be lenient toward paraphrase is also, by construction, somewhat more forgiving of 
+genuine near-misses, a trade-off made deliberately but worth naming. External validity is bounded by 
+a single clinical corpus and a single backbone model family; nothing in this report should be read as a 
+claim about LLM-based extraction in general. 
+8.3 Responsible AI, Fairness and Environmental Limits 
+Bias. The benchmark's sub-specialty distribution is imbalanced (Table 4, Chapter 5): general medicine 
+accounts for 33.3% of examples, while the least-represented specialties (oncology, urology) each 
+account for around 2%. Any model evaluated against this benchmark is therefore assessed — and, if 
+trained on similarly distributed data, will perform — unevenly across specialties. This is compounded 
+by the fact that the initial annotation and self-verification steps share the same underlying model family: 
+a systematic bias in how that model perceives a given specialty's terminology risks being encoded into 
+the gold labels themselves, rather than caught by a genuinely independent check. 
+Privacy. The MTS-Dialog corpus is a publicly released research dataset not drawn from identifiable 
+real patient encounters. Any future deployment of this project's pipeline on real clinical transcripts 
+would require dedicated de-identification, regulatory compliance, and institutional ethical approval, 
+none of which is in scope for, or satisfied by, this academic project. 
+Fairness. RQ4's measured seen-versus-unseen performance gap is directly a fairness concern if any 
+system built on this methodology were deployed operationally: patients whose conversations fall into 
+an under-represented or entirely unseen specialty would systematically receive lower-quality automated 
+extraction than patients in well-represented specialties, with no indication to the clinician unless the 
+system's confidence or specialty coverage is surfaced explicitly. 
+Transparency. Hallucination rate is reported as a first-class metric throughout this project, not a 
+secondary diagnostic, precisely because a syntactically well-formed structured output — particularly in 
+the JSON and dataclass formats — can appear trustworthy while containing fabricated content. Even 
+
+the best-performing format still hallucinates 7.5–9.7% of extracted facts; this residual rate is reported 
+explicitly rather than obscured behind an aggregate accuracy figure. 
+Accountability and human oversight. Given the hallucination rates and the seen/unseen generalisation 
+gap documented in Chapter 6, this project's explicit position is that the resulting model and pipeline are 
+appropriate only as a clinician-facing drafting aid, with mandatory human review before any extracted 
+fact enters a patient record or informs a clinical decision. No claim is made, or should be inferred, that 
+this system is suitable for autonomous clinical documentation or decision-making without a human 
+clinician in the loop. 
+Environmental limits. All experiments were run on a single local 8 GB laptop GPU rather than a shared 
+cluster, and every training run's duration (approximately 42 minutes for RQ1, 109 minutes for RQ2) is 
+reported in Chapter 5 for transparency. No comparative energy-use claim is made, since exact power 
+draw was not instrumented; this is named as a limitation rather than estimated. 
+8.4 AI Assistance and Student Responsibility 
+In the interest of the same transparency this report applies to its technical claims, the role of AI 
+assistance in preparing this Supporting Report and the accompanying Research Paper is disclosed 
+explicitly here, rather than left unstated. 
+AI assistance (Claude, accessed via Claude Code, Anthropic) was used to search, read, and cross-
+reference the project's own existing notebooks, scripts, saved evaluation CSVs, prediction JSON files, 
+and prior draft reports; to organise that verified content into the chapter structure this report and the 
+Research Paper follow; and to draft, format, and typeset both documents in Word, including the tables, 
+in-text citations, and the two diagrams in this report (Figures 1 and 2, generated with matplotlib from 
+the project's own recorded pipeline sequence). It was not used to run any experiment, train any model, 
+generate any evaluation result, or invent any citation: every number in this report and the Research 
+Paper traces to a specific artefact already produced by the student's own prior notebook and script runs 
+(Appendix A), and every reference in the References list below is one of the ten sources the project's 
+own literature review already cites. 
+This distinction matters and is stated plainly: AI assistance here organised and expressed evidence the 
+student had already generated; it did not generate the evidence itself, and it did not exercise scientific 
+judgement about which findings to report or how to interpret them — those interpretive choices (for 
+example, treating RQ1's result as a genuine null finding rather than reframing it, and including Section 
+6.2's case study despite it showing a residual annotation error) were directed by the student. The student 
+remains responsible for reviewing this report's content in full, verifying its claims against the underlying 
+repository before submission, and understanding the material well enough to defend every number, 
+methodological choice, and limitation named here under questioning in the recorded presentation. 
+Chapter 9 — Conclusion and Future Work 
+9.1 Conclusion 
+This report has documented, in full technical depth, a study of how an open-source large language 
+model can be adapted for structured extraction from clinical conversation. A 798-example, human-
+reviewed, difficulty- and specialty-stratified benchmark was constructed from the MTS-Dialog corpus 
+using a two-stage quality-filtering process — one strategy trialled and abandoned, one adopted — 
+followed by full human review. Against this benchmark, four research questions were tested under a 
+
+mathematically formalised, identical scoring standard (Chapter 3). Naive LoRA fine-tuning on 250 
+examples produced a null result relative to prompting; embedding explicit annotation guidelines in the 
+fine-tuning prompt produced a modest, real, positive result at negligible additional cost; JSON function-
+calling output decisively minimised hallucination against natural-language and Python-dataclass 
+alternatives on every metric measured; and a measurable but partly artefactual generalisation gap was 
+found between clinical specialties represented during fine-tuning and specialties held out entirely. 
+The project's single largest limitation is scope: a single clinical domain, no proprietary or literature-
+baseline comparison, and an unsearched hyperparameter space together mean these findings should be 
+read as domain- and configuration-specific rather than general claims about LoRA fine-tuning, 
+guideline-conditioning, or output-format design. Within that scope, the project delivers what it set out 
+to: a reusable benchmark and evaluation harness, an honest empirical account — including a genuine 
+null result reported rather than concealed — and a set of concrete, falsifiable directions for the work 
+this project's own compute and time budget did not permit completing. 
+9.2 Future Work 
+Statistical validation: compute bootstrap confidence intervals or a paired significance test over the 89-
+item unseen split for the RQ1 and RQ2 comparisons, to establish whether the observed deltas 
+exceed sampling noise. 
+Hyperparameter and data-scale ablation: systematically vary training-set size beyond 250 examples and 
+epoch count, to test the leading hypothesis that RQ1's null result reflects under-training rather than 
+a genuine ceiling effect. 
+Multi-domain extension: extend the benchmark-construction pipeline (Chapter 4) to customer-support 
+and e-commerce dialogue, restoring the original plan's multi-domain scope and testing whether 
+RQ1–RQ4's findings replicate outside the clinical domain. 
+Proprietary and literature baselines: run at least a partial GPT-4 zero-shot comparison on the 89-item 
+unseen split, and either reproduce or cite comparable published numbers for InstructUIE, GoLLIE 
+7B, and FnCTOD-LLaMA2-13B. 
+Complete the human-evaluation package: finish rating the stratified 60-item sample and compute 
+Pearson/Spearman/Kendall correlation against the automatic fuzzy-F1 metric, to validate — or 
+correct — the metric design used throughout this project. 
+Fuller GoLLIE-style regularisation for RQ2: test whether class-order shuffling, class dropout, and 
+guideline paraphrasing close the gap between this project's +2.3-point result and GoLLIE's own 
++13-point result, isolating how much of that gap is attributable to regularisation technique versus 
+data and compute scale. 
+Mechanistic investigation of RQ3's few-shot/hallucination interaction: run controlled experiments 
+varying output-format constraint independently of example count, to establish whether the effect 
+observed in Section 6.6 is a general property of in-context examples or specific to less-constrained 
+output grammars. 
+Two questions raised by this work remain genuinely open. First, whether RQ1's null result reflects a 
+fixable data/compute constraint or a real ceiling effect in strongly instruction-tuned models cannot be 
+distinguished without the data-scale ablation proposed above. Second, the precise mechanism behind 
+RQ3's few-shot-increases-hallucination effect for less-constrained output formats was not established 
+within this project's scope. These directions extend the evidence rather than rewrite it; the RQ1 null 
+result, the RQ4 generalisation gap, and the RQ3 output-format effect remain the three findings most 
+worth carrying into any next iteration of this work. 
+ 
+ 
+
+References 
+The following ten references form the verified corpus used throughout this report and the accompanying 
+Research Paper. Numerical citations in the chapters above refer to this list; no additional or unverified 
+source is introduced. 
+[1] J. Jiao, Y. Chai, A. Jindal, and H. Ji, “Instruct and Extract: Instruction Tuning for On-Demand Information 
+Extraction,” in Proc. EMNLP 2023, Singapore, Dec. 2023, pp. 7340–7356. 
+[2] T. Li, S. Reddy, G. Sridhara, and W. Y. Wang, “Large Language Models as Zero-shot Dialogue State Trackers 
+through Function Calling,” in Proc. ACL 2024, Bangkok, Aug. 2024. 
+[3] X. Wang, N. Zhou, F. Tan, M. Gui, R. Zhang, Z. Zhang, Q. Zheng, W. Huang, K. Chen, and X. Huang, 
+“InstructUIE: Multi-task Instruction Tuning for Unified Information Extraction,” arXiv preprint 
+arXiv:2304.08085, Apr. 2023. 
+[4] O. Sainz, I. Garcia-Ferrero, R. Agerri, O. L. de Lacalle, G. Rigau, and E. Agirre, “GoLLIE: Annotation 
+Guidelines Improve Zero-Shot Information Extraction,” in Proc. ICLR 2024, Vienna, May 2024. 
+[5] P. Budzianowski and I. Vulic, “Hello, It’s GPT-2 — How Can I Help You? Towards the Use of Pretrained 
+Language Models for Task-Oriented Dialogue Systems,” in Proc. NLP4ConvAI Workshop at ACL 2019, pp. 15–
+22. 
+[6] X. Liu, Z. Wang, Y. Zhang, C. Sun, and H. Peng, “MultiWOZ 2.2: A Dialogue Dataset with Additional 
+Annotation Corrections and State Tracking Baselines,” in Proc. NLP4ConvAI Workshop at ACL 2021. 
+[7] E. J. Hu, Y. Shen, P. Wallis, Z. Allen-Zhu, Y. Li, S. Wang, L. Wang, and W. Chen, “LoRA: Low-Rank 
+Adaptation of Large Language Models,” in Proc. ICLR 2022. 
+[8] T. Dettmers, A. Pagnoni, A. Holtzman, and L. Zettlemoyer, “QLoRA: Efficient Finetuning of Quantized 
+LLMs,” in Proc. NeurIPS 2023, New Orleans, Dec. 2023. 
+[9] A. Yang et al., “Qwen3 Technical Report,” arXiv preprint, 2025. 
+[10] A. Ben Abacha, W. Yim, Y. Fan, and T. Lin, “An Empirical Study of Clinical Note Generation from Doctor-
+Patient Encounters,” in Proc. EACL 2023. 
+ 
+ 
+
+Appendix A — Evidence Index 
+This index links each major claim made in this report to the primary artefact it was computed or drawn 
+from, and states the interpretation boundary retained in the prose above. 
+Table 15. Primary evidence map and interpretation boundaries. 
+Report claim 
+Primary evidence artefact 
+Boundary retained 
+Benchmark composition (798, 
+seen/unseen, tiers) 
+benchmark_final_split.json 
+Locked before any fine-tuning run; 
+reused 
+unchanged 
+across 
+RQ1/RQ2/RQ4 
+NLI-filtering 
+flag 
+rate 
+(717/1,687) 
+flagged_for_review.json 
+Abandoned method; retained on 
+disk as negative evidence, not 
+deleted 
+Self-verification 
+flag 
+rate 
+(275/1,687) 
+flagged_for_review_v2.json 
+Adopted 
+method; 
+every 
+flag 
+subsequently human-reviewed 
+Baseline zero-/few-shot per-
+field F1 
+evaluation_results_zeroshot.csv; 
+evaluation_results_fewshot.csv 
+All 798 items; parse failures 
+reported separately, not folded into 
+F1 
+RQ1 fine-tuning comparison 
+finetune_comparison_summary.csv 
+89-item unseen split only; not the 
+full 798 
+RQ2 guideline ablation 
+rq2_guidelines_comparison_summary.csv 
+Same 89-item split; guideline text is 
+the sole independent variable 
+RQ3 format comparison 
+rq3_format_comparison_summary.csv 
+All 798 items, zero- and few-shot; 
+three independent parsers 
+RQ4 
+tier 
+/ 
+seen-unseen 
+breakdown 
+RQ_Results_Summary.ipynb 
+aggregate 
+cells 
+Zero-shot condition only; manual 
+30-item review is a separate, 
+smaller sample 
+Model-size comparison 
+model_size_comparison_summary.csv 
+Supplementary; not part of the 
+original four research questions 
+Environment failures and fixes 
+Session verification (GPU smoke test; 
+token length audit) 
+Reported as diagnosed-and-fixed, 
+not merely noted 
+Human-evaluation 
+package 
+status 
+human_eval_rating_sheet.xlsx; 
+human_eval_answer_key.csv; 
+score_human_eval.py 
+Built but not completed at time of 
+writing; 
+disclosed 
+as 
+such 
+throughout 
+Live demo interface and 
+behaviour 
+gradio_demo.py; 
+screenshot 
+in 
+Figure 9 
+Presentational only; scores 
+shown are computed by the 
+same common_extraction.py 
+module 
+used 
+for 
+every 
+reported result, not a separate 
+metric 
+Source: Repository files named in each row; this table is itself a navigation aid, not a new source of evidence. 
+ 
+
+Appendix B — Selected Reproducibility Notes 
+The project repository remains the source of code, saved artefacts, and detailed logs; this appendix 
+deliberately does not reproduce code listings or verbose per-run output. Every scoring script in the 
+repository imports common_extraction.py so that JSON, natural-language, and dataclass outputs are 
+scored by identical logic (Chapter 3); every fine-tuning run fixes random seed 42 for its training 
+subsample; and every CSV consumed by RQ_Results_Summary.ipynb is read unmodified, with no 
+value hand-edited after generation. The fixed Research Paper submitted alongside this report is not 
+duplicated here and remains its own, separately formatted document in the required IEEE conference 
+template. 
+Review points for a reader checking this report against the repository are limited to: confirm that 
+benchmark_final_split.json's stratification counts match Table 3 and Table 4 (Chapter 5); confirm that 
+the RQ1 and RQ2 fine-tuning runs share an identical training subsample and differ only in prompt text; 
+confirm that the human-evaluation package is described as built-but-incomplete, not completed; and 
+confirm that this report's AI disclosure (Section 8.4) matches 

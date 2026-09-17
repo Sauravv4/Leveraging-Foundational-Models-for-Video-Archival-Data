@@ -1,0 +1,1062 @@
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Fine-Grained Vision Foundation Models for 
+Automated Wind Turbine Inspection 
+ 
+A dissertation submitted in partial fulfilment of  
+The requirement for the degree of  
+MASTER OF SCIENCE in Artificial Intelligence  
+in  
+The Queen’s University of Belfast  
+By  
+Alvyn Shibu  
+10th September 2026 
+ 
+ 
+
+Declaration of Academic Integrity 
+ 
+Before signing the declaration below please check that the submission: 
+ 
+1. Has a full bibliography attached laid out according to the guidelines specified in the Student Project 
+Handbook 
+2. Contains full acknowledgement of all secondary sources used (paper-based and electronic) 
+3. Does not exceed the specified page limit 
+4. Is clearly presented and proof-read 
+5. Is submitted on, or before, the specified or agreed due date. Late submissions will only be accepted in 
+exceptional circumstances or where a deferment has been granted in advance. 
+6. Software and files are submitted via Canvas. 
+ 
+I certify that that the submission is my own work, all sources are correctly attributed, and the contribution of any 
+AI technologies is fully acknowledged. 
+I declare that I have read both the University and the School of Electronics, Electrical Engineering and Computer 
+Science guidelines on plagiarism - 
+https://www.qub.ac.uk/directorates/sgc/learning/LearningResources/Plagiarism/- and that the attached 
+submission is my own original work. No part of it has been submitted for any other assignment and I have 
+acknowledged in my notes and bibliography all written and electronic sources used. 
+I am aware of the disciplinary consequences of failing to abide and follow the School and Queen’s University 
+Regulations on Plagiarism 
+ 
+Name: ALVYN SHIBU 
+Student Number: 40356093 
+Signature: 
+Date of Submission: 10/09/2026 
+ 
+ 
+
+Acknowledgements 
+ 
+ 
+The completion of this project could not have been possible without the expertise of my supervisor, Dr. Awais Rauf. I would 
+like to thank him for bringing his knowledge, experience, his unending guidance and feedback throughout the project. His 
+high standards have made me better at what I do.  
+ 
+I would also like to thank one of my previous teachers, Mr. Tony Donnelly, who sparked my interest in computer science and 
+AI. His incredible teaching skills are the reason I chose this career path. 
+ 
+Last but not least, I would like to thank my friends and family for all their support. None of this would have been possible 
+without them. 
+ 
+ 
+
+Fine-Grained Vision Foundation Models for 
+Automated Wind Turbine Inspection 
+                                             
+Abstract — Automated visual inspection of wind turbine 
+blades for structural defects such as erosion, cracks, lightning 
+strike damage, and coating delamination presents a viable 
+alternative to manual survey, but existing methods typically 
+involve training convolutional architectures from scratch on 
+scarce domain-specific data. This work explores the potential 
+of a large-scale visual foundational model (AM-RADIO), 
+adapted with a lightweight detection head, to exceed the 
+performance of standard detectors (YOLOv8/9/10/11, RT-
+DETR) despite having no turbine-related images in its 
+pretraining 
+set. 
+Two 
+experimental 
+conditions 
+were 
+investigated on five independently collected blade-defect 
+datasets: a per-dataset scenario (train and evaluate on four 
+datasets, evaluate on the same dataset) and a cross-dataset 
+scenario (train on four datasets, evaluate on the fifth). AM-
+RADIO outperformed the strongest of eighteen conventional 
+architectures on four of five datasets by margins of 0.0218–
+0.0704 mAP@0.50, but underperformed by 0.0907 on the 
+smallest dataset (210 training images), and on merged cross-
+dataset training reached 0.8306 mAP@0.50 against 0.785 on 
+the baseline. These results show that foundation-model 
+adaptation outperforms conventional detectors in this domain 
+only above an annotation threshold of a few hundred images, 
+and that combining varied datasets is a practical route to 
+surpassing that threshold without additional labelling. 
+Keywords — Detection, Foundation models, Transfer 
+Learning, Generalisation, Turbines. 
+I. INTRODUCTION 
+Wind turbine blades operate under continuous 
+mechanical and environmental stress, accumulating erosion, 
+cracking, lightning-strike damage and coating loss which, if 
+undetected, progress to structural failure or unscheduled 
+outage [1]. Inspection currently relies on rope-access 
+technicians or manual review of UAV imagery; both are 
+slow, costly, and limited by inspector fatigue, motivating 
+automated vision-based defect detection. 
+Published approaches almost all train convolutional or 
+transformer detectors either from scratch or from generic 
+ImageNet initialisation, on a single small domain-specific 
+dataset [2], [3]. This is a reasonable default given how few 
+annotated blade datasets exist, but it leaves an alternative 
+untested: foundation models pretrained on diverse imagery 
+unrelated to wind energy may transfer better than any 
+architecture trained on scarce in-domain data. Blade 
+inspection is a well-suited testbed for this question precisely 
+because every available dataset is small, defect taxonomies 
+differ between sources, and the sources are rarely combined 
+[4]. 
+This work determines whether AM-RADIO [5], an 
+agglomerative foundation model fitted with a lightweight 
+detection 
+head, 
+outperforms 
+conventional 
+detectors 
+(YOLOv8–v11, RT-DETR) on blade defect detection, both 
+per dataset and on data pooled across sources. Four 
+objectives follow: (i) establish correctly measured 
+conventional baselines across five defect datasets; (ii) fine-
+tune AM-RADIO per dataset, searching unfrozen backbone 
+depth and backbone-to-head learning-rate ratio; (iii) merge 
+the datasets and test whether foundation-model fine-tuning 
+generalises more effectively than conventional detectors 
+under pooled, heterogeneous data, including on a fully held-
+out dataset; and (iv) report a methodologically matched 
+comparison in both settings. A secondary objective 
+evaluates whether vision-language models can describe 
+blade defects, zero-shot and after supervised fine-tuning. 
+Two questions are addressed. Q1: does AM-RADIO 
+fine-tuning outperform conventional detectors when trained 
+and evaluated on each dataset's own splits, and does any 
+advantage hold across datasets of differing size? Q2: does 
+merged cross-dataset training improve AM-RADIO's 
+performance and generalisation by a margin exceeding that 
+achieved by conventional detectors under the same regime? 
+Both families are trained to convergence under matched 
+early-stopping criteria and evaluated under a common 
+protocol. The scope is five blade defect datasets, one 
+foundation backbone, and a fixed set of conventional 
+baselines; 
+edge-hardware 
+latency 
+and 
+alternative 
+foundation-model families are outside it. 
+Section II reviews related work; Section III details 
+datasets, architecture, training and tuning; Section IV 
+reports results; Section V discusses findings and limitations; 
+Section VI concludes. 
+II. RELATED WORK 
+A. Blade Defect Detection 
+Shihavuddin et al. [2] created the DTU-Drone UAV 
+dataset and used it to train four Faster R-CNN versions to 
+detect leading edge erosion, lightning receptor damage, and 
+associated surface conditions. Using an Inception-ResNet-
+V2 architecture, they achieved a mean average precision 
+(mAP) of 81.1%. 
+While the DTU-Drone dataset has been used extensively 
+since its release, it was initially provided without 
+standardised bounding box annotations. As a result, 
+subsequent researchers have re-annotated the same 
+photographs using their own taxonomic systems; therefore, 
+the results of those subsequent studies cannot be directly 
+compared to each other. To provide a basis for comparison, 
+Gohar et al. [6] created a standardised five-class annotation 
+scheme for the same images. 
+Awais Rauf  
+EEECS 
+Queen’s University, Belfast 
+Belfast, United Kingdom 
+a.rauf@qub.ac.uk 
+Alvyn Shibu                 
+EEECS 
+Queen’s University, Belfast 
+Belfast, United Kingdom 
+ashibu02@qub.ac.uk 
+
+In addition to providing a consistent annotation scheme 
+for the same set of images, Gohar et al. [7] also introduced 
+slice-aided hyper inference. Slice-aided hyper-inference is a 
+method of processing ultra-high-resolution drone imagery 
+in overlapping window segments instead of fixed-size 
+patches. When applied to small objects, this technique 
+improved small-object mAP@0.50 by up to 13.2 points 
+across YOLOv5, RetinaNet and Faster R-CNN. Yang et al. 
+[8] designed Blade30 to stitch together drone-captured 
+photographs to create full-blade views. Jia and Chen [9] 
+combined optical and thermal video to produce near-real-
+time segmentation. Both studies suggest that the acquisition 
+and preprocessing components of the overall process are 
+still being refined. Each of these studies trained their 
+convolutional detectors from either scratch or from an 
+ImageNet-trained backbone on a single small corpus. 
+Therefore, each study addressed the resulting data shortage 
+via architecture, i.e., using deeper backbones, sliced 
+inference, instead of altering where the visual prior 
+originated. 
+Additionally, taxonomic systems developed outside the 
+DTU lineage (e.g., the five-category scheme of the Liu 
+dataset [10]) render different datasets incompatible with 
+each other, thus limiting exploration of cross-dataset 
+training. 
+B. Conventional Detectors 
+The baselines used for this evaluation represent the 
+current single stage state-of-the-art. YOLOv8 [11], 
+YOLOv9 [12] and YOLOv10 [13] further enhance the 
+anchor-free, decoupled head architecture of the original 
+YOLO 
+architecture 
+using 
+programmable 
+gradient 
+information and NMS-free end-to- end training. RT-DETR 
+[14] also uses the set prediction capabilities of DETR for 
+real time inference. RT-DETR reports higher COCO 
+accuracy than comparable YOLO variants. Most prior 
+studies on blade inspection have benchmarked their models 
+against older detection architectures. Therefore, the use of 
+these newer detection architectures will provide a more 
+meaningful basis for comparison. 
+C. Foundation Models 
+Li et al.'s [15] work shows that a simple, non-
+hierarchical Vision Transformer (ViT) can serve as a 
+detection backbone, provided a basic feature pyramid is 
+created from a single-scale feature map. This is in contrast 
+to designing a specific hierarchical network for detection. 
+Therefore, the backbone does not need to be specifically 
+designed for detection; it simply needs to be well pretrained, 
+which is the approach followed here. Ranzinger et al. [5] 
+also focused on pre-training by taking CLIP [16], DINOv2 
+[17] and SAM [18] and combining them into AM-RADIO. 
+AM-RADIO performs better than all three of its teachers on 
+most benchmarks and also retains their zero-shot and dense-
+prediction capabilities. 
+However, AM-RADIO has not been evaluated for defect 
+detection within an unrelated industrial domain. Eltoum et 
+al.'s RadioCore [19] is the closest to evaluating AM-
+RADIO. They used multi-scale, few-shot memory banks for 
+anomaly segmentation on MVTec-AD and VisA without 
+fine-tuning their RADIOv2.5 backbone. Training-free 
+feature matching differs from fine-tuning a backbone with a 
+trainable head. Bottles and circuit boards are much more 
+similar to web-image pre-training data than aerial close-ups 
+of composite blade surfaces are. WinCLIP [20] achieved 
+91.8% AUROC on MVTec-AD by using a compositional 
+prompt ensemble over CLIP embeddings, again on 
+manufactured objects. Section IV-E reports a replication on 
+blade imagery. Currently, there is no research comparing 
+agglomerative foundation models with trainable detection 
+heads for wind turbine blade defect detection to 
+conventional detectors under both single-dataset and 
+merged training. 
+III. METHODS 
+A. Datasets 
+Five independently collected blade defect datasets were 
+used: Blade30 [8], Gohar [6], [7], WTBs2025 [21], WTBD 
+[22] and Yae; derived from Liu and Liu [10]. Each arrived 
+in a different annotation format and was converted through 
+a shared pipeline into YOLO-format bounding boxes under 
+one six-category taxonomy (crack, erosion, lightning 
+receptor damage, paint-off, missing teeth, contamination), 
+so that conversion differences could not confound the 
+comparison. Coverage of that taxonomy varies (Table I). 
+Blade30 lacks missing-teeth instances and Gohar lacks 
+contamination; Gohar's source indices were remapped as 0 
+= missing teeth, 1 = erosion, 2 = lightning receptor damage, 
+3 = crack, 4 = paint-off. Label correctness was verified 
+across all five datasets by matching each converted image 
+to its raw source and comparing derived classes against 
+those written by the conversion pipeline; cross-dataset 
+duplication was checked by perceptual hashing. Only one 
+required exclusions; WTBs2025 [21] (referred to as ‘Zhang’ 
+in this paper) provides 7,544 images across nine defect 
+categories. Three categories had no equivalent in the shared 
+taxonomy and were excluded. Lightning strike was 
+excluded because the released data combines real 
+photographs with GA-DCGAN-synthesised samples that 
+could not be reliably separated. Manual review of the 
+remaining categories found annotation reliability varied 
+considerably: sampled crack and erosion boxes frequently 
+did not contain the labelled defect, and both categories were 
+excluded. Coating detachment was retained only after 
+individual review of all 1,085 images, of which 161 were 
+confirmed as showing the labelled defect. Contamination, 
+verified as reliable in sampling, was retained in full. The 
+resulting subset comprises 933 images across two 
+Table I. 
+DATASET COMPOSITION AND CLASS COVERAGE 
+Dataset 
+Train 
+Val 
+Test 
+Classes 
+Blade30 
+210 
+- 
+93 
+5/6 
+Gohar 
+423 
+- 
+93 
+5/6 
+Zhang 
+654 
+140 
+139 
+2/6 
+WTBD 
+852 
+213 
+- 
+6 
+Yae 
+2,314 
+- 
+495 
+5/6 
+Merged 
+4,243 
+931 
+Held Out 
+6 
+
+categories. WTBD populates all six classes but has no 
+independent test split, so its validation split serves as the 
+held-out evaluation set throughout (Section V). Yae, the 
+largest source, uses its own five-category scheme 
+(corrosion, hide-craze, surface-eye, thunderstrike, dirt), 
+mapped onto the shared taxonomy during conversion. Both 
+training and evaluation images were resized to 1024×1024. 
+These resizing parameters were applied equally to both 
+model types. Augmentation during training in the 
+foundation model pipeline included random affine 
+transformation, colour jitter, horizontal flip, and random 
+erase. Attempted mosaic augmentation was ultimately 
+rejected due to its interaction with the fixed patch size of the 
+frozen backbones. No augmentation occurred during 
+evaluation for either model type. For the cross-dataset 
+experiment, training splits of Gohar, WTBD, Zhang, and 
+Yae were combined into a unified set of 4243 training and 
+931 validation images.  
+Blade30 was excluded from this pool entirely and 
+retained as an unseen source, allowing merged training to be 
+tested on a dataset contributing nothing to it 
+B. Model Architecture 
+Two model families were compared. The conventional 
+baseline comprised eighteen architectures from the YOLO 
+and RT-DETR families (YOLOv8n/s/m/l , YOLOv9c/e/s/m 
+, YOLOv10n/s/m/l, YOLO11n/s/m/l, RT-DETR-l/x), each 
+loaded 
+from 
+Ultralytics' 
+official 
+COCO-pretrained 
+checkpoints and fine-tuned separately per dataset. Starting 
+both families from large-scale pretrained weights isolates 
+the pretraining corpus and adaptation strategy rather than 
+confounding them with the presence or absence of 
+pretraining. 
+The foundation-model detector pairs a fixed AM-
+RADIO ViT-H/16 backbone [5] with a trainable detection 
+head (Fig. 1). Spatial features are extracted at constant patch 
+resolution and mapped into a three-level pyramid at strides 
+8, 16 and 32 through three lightweight projection blocks, 
+following the plain-backbone approach of Li et al. [15]. 
+Each block applies two convolutional layers with 
+GroupNorm (32 groups) and GELU activation. GroupNorm 
+replaced batch normalisation because backbone memory 
+limits the batch size to four, at which BatchNorm 
+accumulates unstable running statistics; the training-
+evaluation discrepancy reached 0.28 to 0.38 mean absolute 
+difference 
+before 
+the 
+change, 
+and 
+normalising 
+independently of batch statistics removed it. 
+A configurable number of the backbone's final 
+transformer blocks are unfrozen so the pretrained 
+representation can adapt, tuned as described in Section III-
+D. The three pyramid levels feed a feature pyramid and path 
+aggregation network built from Ultralytics' C3k2 and Conv 
+modules, followed by an Ultralytics Detect head trained 
+with the YOLOv8 detection loss. Sharing the neck and head 
+means the two families differ in backbone and adaptation 
+strategy alone, which is what the comparison isolates. 
+C. Training Procedure 
+The baseline models were developed using Ultralytics' 
+default training loop which consists of AdamW-family 
+optimisation with framework-selected configuration, batch 
+sizes of 8, up to 100 epochs with early stopping after 20 
+consecutive epochs without improvement, cosine learning 
+rate scheduling and framework-default Exponential Moving 
+Average (EMA) weight selection for validation and 
+checkpointing.  
+The foundation-model pipeline uses AdamW with four 
+separate groups of parameters (two for the unfrozen 
+backbone blocks and two for the newly initialised head). 
+The decayed parameters are separated from the non-
+decayed parameters. Parameters associated with bias and 
+normalisation layers are excluded from weight decay. In 
+addition, the learning rate for the backbone is reduced 
+relative to that of the head and is discussed further in Section 
+III-D. A base learning rate of 1×10⁻³ and weight decay of 
+5×10⁻4 are used in conjunction with a three-epoch linear 
+warm-up period followed by a cosine decay of 1% of the 
+original learning rate by epoch 100. Early stopping criteria 
+are identical to those of the baseline model, i.e., evaluation 
+every five epochs until there has been 20 consecutive 
+epochs without improvement. Additionally, Automatic 
+Mixed Precision with Gradient Scaling is employed 
+throughout the training process with gradient norm clipping 
+at 10.0.  
+An EMA of trainable parameters is employed to aid in 
+model selection and checkpointing. The decay factor is 
+0.9999 and the time constant is 2000 updates. These are 
+Ultralytics' default values for EMA; therefore, both families 
+employ similar methods to select checkpoints. As such, 
+neither family is afforded an unfair advantage due to 
+differing checkpoint selection rules. EMA is applied only to 
+trainable parameters, as applying EMA to the frozen 
+backbone will produce no benefit. 
+Although both families use the same early stopping 
+criteria to determine convergence, there exists an 
+asymmetry between them. Ultralytics aggregates gradients 
+to a nominal batch size of 64 while the foundation-model 
+pipeline takes an optimiser step per batch at a batch size of 
+4, representing a sixteen-fold difference in effective batch 
+size. Section V examines the observed effects of this 
+difference. 
+ 
+ 
+Fig. 1. AM-RADIO detection architecture. The frozen ViT-H/16 
+backbone supplies spatial features to three trainable projection heads forming 
+a P3/P4/P5 pyramid, followed by an FPN/PAN neck and Detect head. k 
+denotes the number of unfrozen final transformer blocks, tuned per dataset. 
+
+D. Hyperparameter Tuning 
+A grid search was run per dataset over the two 
+hyperparameters governing backbone adaptation: the 
+number of the backbone's final transformer blocks left 
+unfrozen (2, 4 or 8), controlling how much of the pretrained 
+representation can change; and the backbone-to-head 
+learning rate ratio (20, 50 or 100), which follows standard 
+discriminative fine-tuning practice in preventing early large 
+gradients from erasing useful pretrained features. This gives 
+nine configurations per dataset, each trained under identical 
+early-stopping criteria, with the highest EMA-selected 
+validation mAP@0.50 retained. 
+The remaining hyperparameters (input resolution, 
+augmentation policy, scheduling length and clipping 
+threshold) remained constant across all runs of the grid 
+search, so that any differences observed in performance can 
+be solely attributed to the two adaptation hyperparameters. 
+Varying them jointly would have required a substantially 
+larger search than the available compute allowed. 
+Three of the five datasets, Gohar, Zhang and Yae, 
+performed best with four unfrozen blocks. Yae (the largest) 
+continued to show that four unfrozen blocks were preferred, 
+demonstrating that adaptation depth does not increase 
+proportionally with the total number of images in the 
+training set. This is revisited later in Section V as it appears 
+that both annotation density and class coverage matter 
+alongside the sheer volume of images.  
+To execute the cross-dataset experiment, the best 
+performing configuration from each individual dataset's 
+grid search was used as opposed to running another grid 
+search because of the cost of running a single configuration 
+at the scale of the combined dataset. All nine configurations 
+for each dataset's grid search were trained using identical 
+batch sizes, accumulation schedules, scheduling lengths and 
+clipping 
+thresholds; 
+therefore, 
+comparisons 
+among 
+configurations are internally controlled and not affected by 
+the pipeline asymmetry described above. 
+E. Vision-Language Model Investigation 
+A second stream of research examined whether vision-
+language models could classify blade defects based upon 
+cropped portions of images; these were combined with the 
+localising capabilities of the detector by providing a textual 
+explanation for the identified defect. Five different prompt 
+methods were used to test the ability of several general 
+purpose vision-language models (BLIP-2 in both OPT and 
+FlanT5-XL configurations, Qwen2.5-VL-3B-Instruct, and a 
+reproduction of the WinCLIP anomaly classifier based on 
+CLIP [20]) to detect blade defects. The results of this initial 
+testing are presented in Section IV-E, and they provided the 
+rationale for performing the supervised fine-tuning 
+discussed next.  
+Fine-tuning used Qwen3-VL-2B-Instruct and applied 
+LoRA (low-rank adaptation, rank=16, alpha=16) to the 
+vision, language, attention and MLP layers inside the 
+Unsloth framework. This updated about 1.1% of the total 
+number of parameters in the model (2.15 billion). The 
+training dataset consisted of 6,924 labelled crops extracted 
+from all five blade datasets. All crops had 50% padding 
+added around the annotated bounding box, and had a 
+minimum crop dimension of 100 pixels, allowing the 
+surrounding blade surface to be present as contextual 
+information. Additionally, 1,500 negative crops were 
+generated by sampling from source image corners, giving 
+the model non-defective regions to differentiate from. 
+Finally, each crop was transformed into a single turn image 
+and instruction pair where the ground truth class name was 
+used as the desired output response.  
+Training was performed for three epochs using 8-bit 
+AdamW at a learning rate of 2×10-4 with linear decay and 
+five warmup steps, an effective batch size of 8, and mixed 
+precision. At the end of training, a final training loss of 
+0.018 was achieved. Evaluation of the trained adapters was 
+conducted using both the Gohar test set and WTBD 
+validation split, which were kept separate from the fine-
+tuning process. 
+F. Ethical Considerations 
+All datasets used in this study are secondary, publicly 
+available or previously published research datasets 
+consisting of aerial and ground-based photographs of wind 
+turbine infrastructure; none contain personally identifiable 
+information; no primary data collection involving human 
+participants was undertaken; thus no consent procedures 
+were necessary. Where datasets are derived from a shared 
+underlying image source, original dataset and annotation 
+provenance is credited in Section III-A and in the 
+corresponding dataset descriptions above. As the foundation 
+model backbone used was pretrained on broad general-
+purpose web imagery unrelated to wind energy; its 
+underlying training data provenance and any associated 
+biases are inherited rather than independently assessed 
+within this study; this is identified as a limitation in Section 
+V. Given the safety-critical nature of wind turbine 
+inspection, validation well beyond the scope of this study 
+would be required before any of these approaches could be 
+used in place of, rather than alongside, qualified human 
+inspection. Fairness across defect categories is a further 
+concern: pronounced class imbalance means per-class 
+reliability is unequal, and the weakest classes in this study 
+include structurally critical damage, so deployment would 
+require per-class validation rather than aggregate accuracy.  
+IV. EXPERIMENTATION AND RESULTS 
+A. Hardware and Software Environment 
+All experiments were conducted on Google Colab using 
+a single NVIDIA A100-SXM4 GPU with 40 GB of 
+memory. The software environment comprised Python 
+3.13.15, PyTorch 2.11.0 with CUDA 12.8, Ultralytics 
+8.4.145, and torchmetrics for detection metric computation. 
+AM-RADIO ViT-H/16 checkpoints were obtained through 
+torch.hub. The vision-language experiments used the 
+HuggingFace transformers library with Salesforce's BLIP-2 
+checkpoints, Qwen2.5-VL-3B-Instruct, OpenCLIP with 
+LAION-400M pretraining, and Qwen3-VL-2B-Instruct 
+fine-tuned through the Unsloth framework with low-rank 
+adaptation. A full environment specification is provided in 
+the supporting material. 
+Conventional baselines were trained through Ultralytics' 
+native pipeline with automatic mixed precision and 
+
+framework-default augmentation. The foundation-model 
+pipeline used a custom training loop implementing the 
+procedure described in Section III-C, sharing the Ultralytics 
+detection 
+head, 
+loss 
+function 
+and 
+non-maximum 
+suppression implementation so that the two families differ 
+only where intended 
+B. Evaluation Metrics 
+Detection performance is reported as mean average 
+precision at an IoU threshold of 0.50 (mAP@0.50), 
+alongside mAP averaged over 0.50 to 0.95 in 0.05 
+increments. The former is the standard detection metric and 
+Ultralytics' internal selection criterion, allowing consistent 
+comparison between families; the latter penalises imprecise 
+localisation, where a plain ViT backbone with a lightweight 
+projection pyramid might reasonably differ from a purpose-
+designed convolutional detector. Vision-language results 
+are reported as classification accuracy alongside false-
+positive rate on undefected regions, since accuracy alone 
+cannot distinguish genuine discrimination from a fixed bias 
+toward one class. 
+C. Metric Limitations 
+Reporting both IoU thresholds reduces but does not 
+remove the limitations of aggregate metrics. Neither value 
+is a claim of deployment sufficiency, and neither reflects 
+per-class reliability, which Table IV shows varies 
+considerably. The WinCLIP replication in Section IV-E 
+uses AUROC, matching the original publication [20], since 
+a fixed threshold would misrepresent a method never 
+optimised for this task. Several evaluation sets are small: 
+Blade30's test split contains 93 images and some per-class 
+samples number fewer than 15, so reported values carry 
+meaningful sampling variance and small per-class 
+differences should not be over-interpreted. 
+D. Per-Dataset and Cross-Dataset Detection Results 
+Table II reports the best conventional baseline and the 
+best AM-RADIO configuration for each dataset, selected as 
+described in Section III-D. 
+AM-RADIO exceeded the strongest conventional 
+baseline on four of five datasets, by 0.0218 to 0.0704 
+mAP@0.50. 
+The 
+exception 
+is 
+Blade30, 
+which 
+underperformed by 0.0907 and is the only dataset with 
+fewer than 400 training images. Above roughly 400 images 
+the foundation model is competitive or superior; below it the 
+advantage reverses. The margin does not scale linearly with 
+size: WTBD, at 852 images, gained the most (+0.0704), 
+while Yae, with nearly three times as many, gained +0.0448. 
+Dataset difficulty and annotation characteristics evidently 
+matter alongside image count. Zhang is instructive: both 
+families score poorly in absolute terms (0.4258 and 0.4524), 
+yet the relative margin remains positive, so the advantage 
+does not depend on the task being easy. 
+The dataset on which the foundation model performed 
+worse than the conventional baseline was also the one that 
+required the most conservative modification of the 
+pretrained 
+representation. 
+This 
+is 
+consistent 
+with 
+insufficient data to allow for effective backbone fine-tuning.  
+The cross-dataset study represents the most direct 
+evaluation of whether combining heterogeneous datasets 
+can address the limitation described above.  
+Table III decomposes both merged models across the 
+individual test sets. On the merged validation split AM-
+RADIO reached 0.8306 mAP@0.50 against 0.785 for a 
+YOLOv9s baseline trained on the same data. Table III 
+shows the advantage holds on every individual test set, so it 
+is not an artefact of how the pooled split is composed. Both 
+families score below their per-dataset counterparts, as 
+expected when one model must fit four independently 
+collected sources, though the foundation model gives up 
+ 
+Fig. 2. Training progression on the merged cross-dataset experiment. 
+mAP@0.50 crosses the baseline at epoch 62 and continues to improve as 
+training loss falls, reaching a final mAP@0.50 of 0.8306 
+TABLE II. 
+Per-Dataset Detection Results (mAP@0.50), Ordered by Training Set Size 
+Dataset 
+Train 
+Images 
+Baseline 
+(model) 
+AM-RADIO 
+Δ 
+Blade30 
+210 
+0.4226 
+(YOLOv8s) 
+0.3319 (blocks 
+2, ratio 20) 
+ 
+-0.0907 
+Gohar 
+423 
+0.8335 
+(RT-
+DETR-x) 
+0.8553 (blocks 
+4, ratio 100) 
++0.0218 
+Zhang 
+654 
+0.4258 
+(YOLOv9e) 
+0.4524 (blocks 
+4, ratio 50) 
++0.0266 
+WTBD 
+852 
+0.8371 
+(YOLOv9s) 
+0.9075 (blocks 
+8, ratio 20) 
++0.0704 
+Yae 
+2314 
+0.8529 
+(YOLOv9s) 
+0.8977 (blocks 
+4, ratio 50) 
++0.0448 
+TABLE III.  
+CROSS-DATASET GENERALISATION (mAP@0.50) 
+ 
+Test Set 
+Baseline 
+(Per-
+dataset) 
+Baseline 
+(Merged) 
+AM-
+RADIO 
+(Per-
+dataset) 
+AM-
+RADIO 
+(Merged) 
+Gohar 
+0.8335 
+0.7443 
+0.8553 
+0.8200 
+Zhang 
+0.4258 
+0.4153 
+0.4524 
+0.4302 
+WTBD 
+0.8371 
+0.8611 
+0.9075 
+0.8863 
+Yae 
+0.8529 
+0.8272 
+0.8977 
+0.8725 
+
+roughly half as much (0.0260 mean reduction against 
+0.0459). 
+E. VLM Results 
+Fine-tuning Qwen3-VL-2B via low-rank adaptation on 
+6,924 domain-specific crop images yielded 57.3% 
+classification accuracy on the Gohar test split and 86.5% on 
+the WTBD validation split; this contrasts sharply with 
+approximately 14% achieved when randomly selecting one 
+of the seven possible answers. Neither split contributed to 
+fine-tuning. Differences in accuracy between these two 
+splits are primarily due to their different class compositions, 
+specifically, WTBD has a relatively balanced distribution of 
+all six categories of defects, whereas Gohar's crop images 
+are heavily weighted towards two categories and have very 
+few examples in some other categories.  
+False positive rates for the negative crop images 
+(sampled from areas where no defects were identified) were 
+11.8% on Gohar and 16.0% on WTBD, showing that the 
+model correctly differentiates defective blade surfaces from 
+non-defective ones in most instances. This cannot be 
+determined based solely upon accuracy since a model that 
+consistently predicts a defect would appear successful if 
+evaluated solely on a dataset containing only defects.  
+Per-class results in Table IV show uneven reliability, 
+from 93.1% on cracks in WTBD to 48.7% on missing teeth 
+in Gohar, with the weakest categories being those with 
+fewest training crops. Missing teeth is among the most 
+structurally consequential defect types, which bears on the 
+fairness considerations in Section III-F. Under-detection 
+rather than misclassification dominates the error profile. 
+Integrating the fine-tuned model with the detector 
+confirms the two components function together. Using the 
+detector's own predicted boxes rather than ground-truth 
+annotations, detector and VLM agreed on class assignment 
+in every case at detection confidence 0.22 or above. Below 
+that threshold, disagreements clustered by source image 
+rather than by confidence value, indicating the VLM 
+responds to image content rather than defaulting to a fixed 
+answer under uncertainty. 
+Regarding zero-shot evaluations, it was determined that 
+none of the general purpose vision-language models 
+evaluated without additional training could be used for this 
+domain. Both BLIP-2 configurations produced near-
+identical outputs for annotated defective crops and matched 
+control crops from the same source images, across all five 
+prompting strategies. 
+Although Qwen2.5-VL-3B exhibited a response pattern 
+associated with class-based responses when using structured 
+prompting techniques, altering the order of the same answer 
+options for the same crop resulted in a change in the 
+majority prediction from erosion (18/24) to no observable 
+defect (19/25), indicating that the position of the answer 
+within the list is more influential than the image content 
+itself. 
+ 
+Finally, WinCLIP was replicated using the backbones 
+and ensemble of prompts outlined in the original article and 
+generated an AUROC score of 0.608 relative to the 0.918 
+reported in the original article's manufactured-object dataset 
+and 0.500 relative to random chance. Fewer than 7,000 
+domain-specific crops significantly reduced the discrepancy 
+resulting from generalising pre-training alone. 
+V. DISCUSSION 
+The per-dataset results answer Q1 with a qualification. 
+AM-RADIO 
+outperformed 
+the 
+best 
+of 
+eighteen 
+conventional architectures on four of five datasets, so a fine-
+tuned foundation model can exceed conventional detectors 
+on this task. The advantage does not hold uniformly, and 
+where it fails is informative: the four successful datasets 
+provided 423 to 2,314 training images, the unsuccessful one 
+210. Adapting a 651-million-parameter backbone with a 
+newly initialised detection head appears to require a 
+minimum volume of annotated in-domain data, below 
+which a smaller architecture fine-tuned from COCO 
+pretraining is the better choice. 
+The 
+hyperparameter 
+grid 
+corroborates 
+this 
+independently. Adaptation was most conservative on 
+Blade30, at two unfrozen blocks, so the dataset requiring 
+least backbone modification is also the one where the 
+approach failed. That two independent lines of evidence 
+point to the same threshold strengthens the reading, since 
+the grid was not constructed to test it. 
+The threshold is not a simple function of image count: 
+adaptation depth and margin size both track annotation 
+density and class coverage as much as they track dataset 
+size. 
+Q2 is answered affirmatively: the foundation model led 
+on the pooled split and on every source individually. Both 
+families gave up accuracy relative to single-dataset training, 
+but the foundation model gave up around half as much, so  
+broad pretraining appears to confer tolerance of source 
+heterogeneity alongside the per-dataset gains (Fig 3). This 
+Table IV. 
+PER-CLASS CLASSIFICATION ACCURACY OF THE FINE-
+TUNED VISION-LANGUAGE MODEL ON HELD-OUT DATA 
+Class 
+Gohar (test) 
+WTBD (val) 
+Crack 
+72.7% (8/11) 
+93.1% (149/160) 
+Paint-off 
+70.0% (7/10) 
+87.1% (74/85) 
+Erosion 
+58.6% (34/58) 
+69.8% (37/53) 
+Lightning 
+receptor damage 
+50.0% (3/6) 
+71.4% (10/14) 
+Missing teeth 
+48.7% (19/39) 
+absent from split 
+ 
+Fig. 3. Detections from the merged cross-dataset model on each contributing 
+source: (a) Gohar, (b) WTBD, (c) Yae, (d) WTBs2025. Ground truth shown as 
+solid green boxes, model predictions as dashed red boxes. 
+
+is the more striking for concerning the same model that 
+proved the weaker choice on the smallest dataset. Whatever 
+makes a large pretrained backbone unsuitable for 210 
+images is not what governs its behaviour when sources are 
+combined. 
+The vision-language investigation also demonstrates a 
+similar trend. In all cases for which the use of zero-shot 
+transfer was evaluated, each of the models and prompting 
+techniques were unsuccessful in transferring to the aerial 
+industrial image dataset; the most successful application 
+was a reproduction of WinCLIP, which had an AUROC 
+score of 0.608, slightly better than random and 0.31 lower 
+than when applied to the manufactured objects dataset. With 
+less than 7,000 fine-tuned crop images, almost all of the 
+difference between the two datasets was closed. As such, 
+both parts of this research demonstrate that while general-
+purpose large-scale pre-training is insufficient to transfer 
+directly to aerial industrial images without additional 
+training data, a relatively small amount of domain-specific 
+training data can enable the model to achieve comparable 
+results. 
+A. Limitations 
+ 
+Some limitations restrict the generalisability of 
+these findings. As Ultralytics accumulates gradients to an 
+effective batch of 64 and the foundation model pipeline 
+updates gradient per batch of 4, the effective batch sizes for 
+each of the two pipelines differ by a factor of 16. On nearly 
+all iterations, gradient norm clipping at 10.0 occurred, with 
+pre-clip norms varying from approximately 100 to 500. 
+Clipping effectively limits per-step updates regardless of 
+batch size; thus, the effects of the differences in batch size 
+are greatly reduced. Both families of models were trained 
+until convergence using the same early stopping criterion. 
+Therefore, although the use of early stopping does not 
+completely eliminate the possibility of bias due to training 
+time, it substantially reduces it.  
+ 
+Additionally, WTBD does not have a separate test set, 
+therefore the validation set provided by WTBD was used for 
+evaluation purposes for all comparisons. As such, the 
+WTBD results are less rigorously held out from testing than 
+those obtained from the other four datasets. 
+ 
+The merged baseline was YOLOv9s alone rather than 
+the best of the eighteen-architecture sweep used per dataset. 
+Results are also reported from single training runs; 
+checkpoint-to-checkpoint variation reached 0.15 mAP on 
+the smaller datasets, so the Blade30 margin should be read 
+as indicative rather than established. 
+VI. CONCLUSION AND FUTURE WORK 
+This work evaluated whether a large-scale visual 
+foundation model, fine-tuned with a lightweight detection 
+head, outperforms conventional detectors on wind turbine 
+blade defect detection. AM-RADIO was compared against 
+eighteen 
+conventional 
+architectures 
+across 
+five 
+independently collected datasets, first per dataset and then 
+under merged training with Blade30 held out entirely. Both 
+families started from large-scale pretrained weights and 
+were trained to convergence under identical criteria. 
+AM-RADIO exceeded the strongest conventional 
+baseline on four of five datasets, by 0.0218 to 0.0704 
+mAP@0.50, and underperformed by 0.0907 on the smallest. 
+The failure case is the substantive finding: foundation-
+model adaptation in this domain appears to require a 
+minimum volume of annotated in-domain data, on the order 
+of several hundred images, below which a smaller 
+architecture fine-tuned from general pretraining is the better 
+choice. 
+The 
+hyperparameter 
+search 
+supports 
+this 
+independently, since the dataset requiring the most 
+conservative backbone adaptation is the one where the 
+approach failed. 
+A parallel investigation found that general-purpose 
+vision-language models do not transfer to this domain zero-
+shot, the best replication reaching 0.608 AUROC against 
+0.500 for chance, but that low-rank fine-tuning of Qwen3-
+VL-2B on fewer than 7,000 domain crops reached 86.5% 
+classification accuracy on held-out data. 
+Several questions remain open. It is unclear if the 
+threshold identified is unique to AM-RADIO and its 
+adaptation methodology, or if it represents a common 
+characteristic of all foundation model fine-tuning for 
+detection-type tasks. Only one backbone was evaluated. 
+Similarly, it is unclear why the adaptation depth did not 
+increase linearly as the size of the dataset increased. 
+Annotation density or class composition may affect how 
+optimal adaptation strategies are determined in ways that 
+were not studied in this research. 
+ 
+Main Body Word Count: 4986 
+ 
+ 
+ 
+
+REFERENCES 
+[1] J. M. Pinar Pérez, F. P. García Márquez, A. Tobias, and M. 
+Papaelias, "Wind turbine reliability analysis," Renew. Sustain. 
+Energy Rev., vol. 23, pp. 463–472, 2013. 
+[2] A. Shihavuddin et al., "Wind turbine surface damage detection by 
+deep learning aided drone inspection analysis," Energies, vol. 12, no. 
+4, p. 676, 2019. 
+[3] A. Foster, O. Best, M. Gianni, A. Khan, K. Collins, and S. Sharma, 
+"Drone footage wind turbine surface damage detection," in Proc. 
+IEEE 14th Image, Video, and Multidimensional Signal Processing 
+Workshop (IVMSP), Nafplio, Greece, 2022, pp. 1–5. 
+[4] I. Gohar, W. K. Yew, A. Halimi, and J. See, "Review of state-of-the-
+art surface defect detection on wind turbine blades through aerial 
+imagery: Challenges and recommendations," Eng. Appl. Artif. 
+Intell., vol. 144, p. 109970, 2025. 
+[5] M. Ranzinger, G. Heinrich, J. Kautz, and P. Molchanov, "AM-
+RADIO: Agglomerative vision foundation model reduce all domains 
+into one," in Proc. IEEE/CVF Conf. Computer Vision and Pattern 
+Recognition (CVPR), 2024, pp. 12490–12500. 
+[6] I. Gohar, J. See, A. Halimi, and W. K. Yew, "Automatic defect 
+detection in wind turbine blade images: Model benchmarks and re-
+annotations," in Proc. IEEE ICMEW, 2023, pp. 290–295. 
+[7] I. Gohar, A. Halimi, J. See, W. K. Yew, and C. Yang, "Slice-aided 
+defect detection in ultra high-resolution wind turbine blade images," 
+Machines, vol. 11, no. 10, p. 953, 2023. 
+[8] C. Yang, X. Liu, H. Zhou, Y. Ke, and J. See, "Towards accurate 
+image stitching for drone-based wind turbine blade inspection," 
+Renew. Energy, vol. 203, pp. 267–279, 2023. 
+[9] X. Jia and X. Chen, "AI-based optical-thermal video data fusion for 
+near real-time blade segmentation in normal wind turbine 
+operation," Eng. Appl. Artif. Intell., vol. 127, p. 107325, 2024. 
+[10] M. Liu and D. Liu, "Wind turbine blades defect detection based on 
+global and local attention with multi-feature fusion," Appl. Soft 
+Comput., vol. 185, p. 113914, 2025. 
+[11] G. Jocher, A. Chaurasia, and J. Qiu, "Ultralytics YOLO," 2023. 
+[Online]. 
+Available: 
+https://github.com/ultralytics/ultralytics. 
+Accessed: 10 Sep. 2026. 
+[12] C.-Y. Wang, I.-H. Yeh, and H.-Y. M. Liao, "YOLOv9: Learning 
+what you want to learn using programmable gradient information," 
+in Proc. ECCV, 2024, pp. 1–21. 
+[13] A. Wang, H. Chen, L. Liu, et al., "YOLOv10: Real-time end-to-end 
+object detection," in Proc. NeurIPS, 2024. 
+[14] Y. Zhao, W. Lv, S. Xu, J. Wei, G. Wang, Q. Dang, Y. Liu, and J. 
+Chen, "DETRs beat YOLOs on real-time object detection," in Proc. 
+IEEE/CVF CVPR, Seattle, WA, USA, 2024. 
+[15] Y. Li, H. Mao, R. Girshick, and K. He, "Exploring plain vision 
+transformer backbones for object detection," in Proc. ECCV, 2022, 
+pp. 280–296. 
+[16] A. Radford et al., "Learning transferable visual models from natural 
+language supervision," in Proc. ICML, 2021, pp. 8748–8763. 
+[17] M. Oquab et al., "DINOv2: Learning robust visual features without 
+supervision," Trans. Mach. Learn. Res., 2024. 
+[18] A. Kirillov et al., "Segment Anything," in Proc. IEEE/CVF ICCV, 
+2023, pp. 4015–4026. 
+[19] M. A. M. Eltoum, E. Iqbal, S. U. Khan, and Y. Abdulrahman, 
+"RadioCore: Few-shot industrial anomaly segmentation with multi-
+scale Radio ViT features," in Proc. IEEE/CVF Conf. Computer 
+Vision and Pattern Recognition Workshops (CVPRW), VISION 
+Workshop, 2026, pp. 7288–7297. 
+[20] J. Jeong, Y. Zou, T. Kim, D. Zhang, A. Ravichandran, and O. 
+Dabeer, "WinCLIP: Zero-/few-shot anomaly classification and 
+segmentation," in Proc. IEEE/CVF CVPR, 2023, pp. 19606–19616. 
+[21] R. Zhang, S. Wang, S. Liu, Y. Liang, T. Wang, C. Liu, and S. Chen, 
+"Wind turbine blades surface defect high-quality image dataset 
+construction and performance validation," Sci. Data, 2026, doi: 
+10.1038/s41597-026-07455-1. 
+[22] L. Ji, J. Cheng, and S. Wu, "Multiclass dataset for intelligent 
+detection of wind turbine blade defects using drone imagery," Sci. 
+Data, vol. 13, no. 1, p. 396, 2026. 
+[23] [23] Anthropic, "Claude (Opus 5)," Large language model, 2026. 
+[Online]. Available: https://claude.ai 
+ 
+Note: Anthropic's Claude Opus 5 [23] was used to assist with idea 
+generation, debugging and refactoring of the manually authored 
+experimental code for efficiency and style compliance, generate 
+synonyms, and to check the paper for grammatical errors and internal 
+inconsistencies. All experimental work, results, dataset curation, and 
+analysis are the author's own. 
