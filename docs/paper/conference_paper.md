@@ -155,17 +155,28 @@ detection, semantic concept annotation, ad-hoc video search — and the expectat
 compared against human-annotated references. That expectation is precisely what a working archive
 usually cannot satisfy: annotation budgets are the binding constraint, and the collections most in
 need of description are the ones least likely to receive it. Work on cultural-heritage and
-community archives has consequently leaned on automatic description, generally reporting
-system output without a companion estimate of per-field reliability. **`[TO FILL: 2–3 citations
-specific to cultural-heritage or community-archive AV description — search "audiovisual archive
-automatic metadata" in the QUB library and cite the closest two.]`**
+broadcast archives has consequently leaned on automatic description. The German Broadcasting
+Archive is the closest published analogue to this project's setting: Mühling *et al.* [2] applied
+shot-boundary detection, concept classification, person recognition and text recognition to
+roughly 34,000 hours of GDR television, and the later VIVA system [3] extended that to 91
+archive-specific concepts and 98 personalities drawn from the same collection. Pessanha and Akdag
+Salah [4] survey the equivalent shift in oral-history archives, where speech recognition and
+language processing have made large interview collections tractable for the first time.
+
+What these systems report is **system-level** accuracy: retrieval performance measured over an
+evaluated concept set. VIVA addresses unreliability directly, but by adding human review and
+user-feedback components to the acquisition loop rather than by attaching a reliability estimate
+to each published record. That distinction locates the present work. It adds no reviewer, and
+instead publishes, for every field of every clip, how strongly independent sources corroborated
+the value — so that a cataloguer can see which fields are weakly supported without re-examining
+the footage.
 
 ### B. Foundation Models as Zero-Shot Annotators `[Heading2]`
 
-Contrastive image–text pretraining [2] made open-vocabulary visual labelling possible without
+Contrastive image–text pretraining [5] made open-vocabulary visual labelling possible without
 task-specific training, and the same shift reached speech with large-scale weakly supervised
-recognition [3] and vision-language question answering with BLIP [4] and ViLT [5]. End-to-end
-set-prediction detection [6] supplies a third, architecturally unrelated route to counting people
+recognition [6] and vision-language question answering with BLIP [7] and ViLT [8]. End-to-end
+set-prediction detection [9] supplies a third, architecturally unrelated route to counting people
 in a frame. The property this work exploits is not any single model's accuracy but the
 *heterogeneity* of their failure modes: CLIP's ranking errors, a VQA model's answer-prior bias and
 a detector's missed small objects are not the same errors, so concurrence between them carries
@@ -174,19 +185,19 @@ information that concurrence between two checkpoints of one architecture does no
 ### C. Consensus, Weak Supervision and Silver Standards `[Heading2]`
 
 Treating multiple noisy automatic sources as votes to be combined rather than outputs to be chosen
-between is the core idea of programmatic weak supervision [7], where labelling functions of
+between is the core idea of programmatic weak supervision [10], where labelling functions of
 unknown accuracy are aggregated into probabilistic labels. The corpus-linguistics tradition
-supplies the complementary framing: inter-annotator agreement statistics [8] quantify how much a
+supplies the complementary framing: inter-annotator agreement statistics [11] quantify how much a
 set of annotations can be relied upon, independently of whether any annotator is correct. This
 work applies that framing to machine annotators, with one deliberate restriction — agreement is
 reported as corroboration and never reinterpreted as a calibrated probability of correctness.
 
 ### D. Vision-Language Models for Video Description `[Heading2]`
 
-Recent open-weight multimodal models — the Qwen3-VL family [9] and InternVL3 [10] — accept
+Recent open-weight multimodal models — the Qwen3-VL family [12] and InternVL3 [13] — accept
 interleaved image sequences and emit schema-constrained text, making them plausible single-model
 replacements for a multi-component pipeline. Their known failure mode is object hallucination
-[11]: fluent output describing content that is not present. Reasoning-trace ("Thinking") variants
+[14]: fluent output describing content that is not present. Reasoning-trace ("Thinking") variants
 are marketed as mitigating this through deliberation. Neither claim has, to our knowledge, been
 tested on archival community-television footage, which differs from the web video these models
 were trained on in resolution, framing, lighting and subject matter.
@@ -262,7 +273,7 @@ corroborated by the source that produced it.
 ### C. Scene-Aware Temporal Sampling `[Heading2]`
 
 The production policy detects shot boundaries with an adaptive rolling-content detector
-(threshold 3.0, minimum scene length 0.6 s) [12], samples scene midpoints, always includes the
+(threshold 3.0, minimum scene length 0.6 s) [15], samples scene midpoints, always includes the
 temporal centre, and caps the result at 5 scene frames. Where detection fails or yields too few
 scenes, fixed frames at 20/50/80% of clip duration are added. On-screen text uses a separate,
 denser probe — every 2.5 s to a maximum of 12 frames, offset 0.5 s from the clip edges — because
@@ -738,58 +749,72 @@ would give people count a second, audio-side source to corroborate against its f
 
 ## REFERENCES `[references]`
 
-> **`[TO FILL: verify every entry against the published record — volume, pages, DOI — before
-> submission. Entries below are correct as to authorship, venue and year.]`**
+> **`[TO FILL: entries [1]–[4] are verified against dblp and the publishers' records. Entries [5]
+> onward are correct as to authorship, venue and year, but their volume, page and DOI fields still
+> need checking before submission.]`**
 
 [1] A. F. Smeaton, P. Over, and W. Kraaij, "Evaluation campaigns and TRECVid," in *Proc. 8th ACM
 Int. Workshop on Multimedia Information Retrieval (MIR)*, 2006, pp. 321–330.
 
-[2] A. Radford *et al.*, "Learning transferable visual models from natural language supervision,"
+[2] M. Mühling, M. Meister, N. Korfhage, J. Wehling, A. Hörth, R. Ewerth, and B. Freisleben,
+"Content-based video retrieval in historical collections of the German Broadcasting Archive,"
+*Int. J. on Digital Libraries*, vol. 20, no. 2, pp. 167–183, 2019,
+doi: 10.1007/s00799-018-0236-z.
+
+[3] M. Mühling, N. Korfhage, K. Pustu-Iren, J. Bars, M. Knapp, H. Bellafkir, M. Vogelbacher,
+D. Schneider, A. Hörth, R. Ewerth, and B. Freisleben, "VIVA: Visual information retrieval in video
+archives," *Int. J. on Digital Libraries*, vol. 23, no. 4, pp. 319–333, 2022,
+doi: 10.1007/s00799-022-00337-y.
+
+[4] F. Pessanha and A. Akdag Salah, "A computational look at oral history archives," *ACM J. on
+Computing and Cultural Heritage*, vol. 15, no. 1, art. 6, pp. 1–16, 2022, doi: 10.1145/3477605.
+
+[5] A. Radford *et al.*, "Learning transferable visual models from natural language supervision,"
 in *Proc. 38th Int. Conf. Machine Learning (ICML)*, 2021, pp. 8748–8763.
 
-[3] A. Radford *et al.*, "Robust speech recognition via large-scale weak supervision," in *Proc.
+[6] A. Radford *et al.*, "Robust speech recognition via large-scale weak supervision," in *Proc.
 40th Int. Conf. Machine Learning (ICML)*, 2023, pp. 28492–28518.
 
-[4] J. Li, D. Li, C. Xiong, and S. Hoi, "BLIP: Bootstrapping language-image pre-training for
+[7] J. Li, D. Li, C. Xiong, and S. Hoi, "BLIP: Bootstrapping language-image pre-training for
 unified vision-language understanding and generation," in *Proc. 39th Int. Conf. Machine Learning
 (ICML)*, 2022, pp. 12888–12900.
 
-[5] W. Kim, B. Son, and I. Kim, "ViLT: Vision-and-language transformer without convolution or
+[8] W. Kim, B. Son, and I. Kim, "ViLT: Vision-and-language transformer without convolution or
 region supervision," in *Proc. 38th Int. Conf. Machine Learning (ICML)*, 2021, pp. 5583–5594.
 
-[6] N. Carion *et al.*, "End-to-end object detection with transformers," in *Proc. European Conf.
+[9] N. Carion *et al.*, "End-to-end object detection with transformers," in *Proc. European Conf.
 Computer Vision (ECCV)*, 2020, pp. 213–229.
 
-[7] A. Ratner *et al.*, "Snorkel: Rapid training data creation with weak supervision," *Proc. VLDB
+[10] A. Ratner *et al.*, "Snorkel: Rapid training data creation with weak supervision," *Proc. VLDB
 Endowment*, vol. 11, no. 3, pp. 269–282, 2017.
 
-[8] R. Artstein and M. Poesio, "Inter-coder agreement for computational linguistics,"
+[11] R. Artstein and M. Poesio, "Inter-coder agreement for computational linguistics,"
 *Computational Linguistics*, vol. 34, no. 4, pp. 555–596, 2008.
 
-[9] Qwen Team, "Qwen3-VL technical report," 2025. **`[TO FILL: arXiv identifier]`**
+[12] Qwen Team, "Qwen3-VL technical report," 2025. **`[TO FILL: arXiv identifier]`**
 
-[10] Z. Chen *et al.*, "InternVL3: Exploring advanced training and test-time recipes for
+[13] Z. Chen *et al.*, "InternVL3: Exploring advanced training and test-time recipes for
 open-source multimodal models," 2025. **`[TO FILL: arXiv identifier]`**
 
-[11] A. Rohrbach *et al.*, "Object hallucination in image captioning," in *Proc. Conf. Empirical
+[14] A. Rohrbach *et al.*, "Object hallucination in image captioning," in *Proc. Conf. Empirical
 Methods in Natural Language Processing (EMNLP)*, 2018, pp. 4035–4045.
 
-[12] B. Castellano, "PySceneDetect: Video scene cut detection and analysis tool," 2014–2025.
+[15] B. Castellano, "PySceneDetect: Video scene cut detection and analysis tool," 2014–2025.
 [Online]. Available: https://www.scenedetect.com
 
-[13] C.-Y. Lin, "ROUGE: A package for automatic evaluation of summaries," in *Text Summarization
+[16] C.-Y. Lin, "ROUGE: A package for automatic evaluation of summaries," in *Text Summarization
 Branches Out*, ACL Workshop, 2004, pp. 74–81.
 
-[14] R. Smith, "An overview of the Tesseract OCR engine," in *Proc. 9th Int. Conf. Document
+[17] R. Smith, "An overview of the Tesseract OCR engine," in *Proc. 9th Int. Conf. Document
 Analysis and Recognition (ICDAR)*, 2007, pp. 629–633.
 
-[15] N. Reimers and I. Gurevych, "Sentence-BERT: Sentence embeddings using Siamese BERT-networks,"
+[18] N. Reimers and I. Gurevych, "Sentence-BERT: Sentence embeddings using Siamese BERT-networks,"
 in *Proc. EMNLP-IJCNLP*, 2019, pp. 3982–3992.
 
-[16] R. Campos *et al.*, "YAKE! Keyword extraction from single documents using multiple local
+[19] R. Campos *et al.*, "YAKE! Keyword extraction from single documents using multiple local
 features," *Information Sciences*, vol. 509, pp. 257–289, 2020.
 
-[17] M. Grootendorst, "KeyBERT: Minimal keyword extraction with BERT," 2020. [Online]. Available:
+[20] M. Grootendorst, "KeyBERT: Minimal keyword extraction with BERT," 2020. [Online]. Available:
 https://github.com/MaartenGr/KeyBERT
 
 > **`[TO FILL: add 5–10 archival/cultural-heritage AV description references to Section II-A.]`**

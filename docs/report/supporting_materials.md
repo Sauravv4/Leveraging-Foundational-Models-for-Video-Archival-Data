@@ -50,13 +50,30 @@ archives is that the collections most in need of description are the least likel
 a budget, so the evaluation apparatus the field standardised on is unavailable exactly where the
 technology is most needed.
 
-**Cultural-heritage and community archives.** **`[TO FILL: 4–6 sources. Search terms that work:
-"audiovisual archive automatic metadata", "cultural heritage video access", "community archive
-digitisation AI". Look for EUscreen, the Netherlands Institute for Sound and Vision's published
-work, and BBC R&D archive-indexing output. For each, record: the collection, whether a human
-reference was collected, and what reliability signal (if any) accompanied the published metadata.
-The claim this section must support is that per-field reliability signals are rare in this
-literature — verify that claim rather than assuming it.]`**
+**Cultural-heritage and broadcast archives.** The German Broadcasting Archive supplies the closest
+published analogue to this project. Mühling *et al.* [2] built a distributed content-analysis and
+retrieval system over roughly 34,000 hours of GDR television, combining shot-boundary detection,
+concept classification, person recognition, text recognition and similarity search. The later VIVA
+system [3], on the same collection, extended coverage to 91 archive-specific concepts and 98
+personalities and added a semi-automatic acquisition workflow — a web crawler, image similarity
+search, and review and user-feedback components — explicitly to cut the manual cost of assembling
+training data. Pessanha and Akdag Salah [4] survey the parallel development in oral-history
+archives, where speech recognition and language processing have made large interview collections
+tractable, and note what is lost when aural material is reduced to text.
+
+Read against this project's claim, the pattern is consistent but the wording must be careful.
+These systems report **system-level** effectiveness — retrieval accuracy over an evaluated concept
+set — rather than a per-record reliability signal. VIVA does confront unreliability, and its
+answer is a human in the loop: review and feedback components that correct the model's output.
+That is a different and entirely legitimate response to the same problem, and it is the right
+comparison for the present work, which has no reviewer available and therefore publishes
+corroboration instead.
+
+**`[TO FILL: this characterisation rests on the abstracts and project descriptions, since the
+publisher sites were not reachable during drafting. Read [2], [3] and [4] in full via the QUB
+library and confirm that none attaches a per-field confidence or reliability estimate to its
+published records. If one does, cite it as the exception and position against it — that would
+strengthen §1.8 rather than weaken it.]`**
 
 **The gap this project addresses.** Automatic description of archives is well established;
 publishing it *with an auditable per-field reliability estimate* is not. The distinction matters
@@ -65,10 +82,10 @@ one that presents every field with identical confidence.
 
 ### 1.3 Foundation Models as Zero-Shot Annotators
 
-Contrastive image–text pretraining [2] removed the requirement for task-specific training data in
+Contrastive image–text pretraining [5] removed the requirement for task-specific training data in
 visual labelling, turning annotation into a matter of writing a label vocabulary. Large-scale
-weakly supervised speech recognition [3] did the same for transcription. BLIP [4] and ViLT [5]
-brought open-ended visual question answering, and end-to-end set-prediction detection [6] supplies
+weakly supervised speech recognition [6] did the same for transcription. BLIP [7] and ViLT [8]
+brought open-ended visual question answering, and end-to-end set-prediction detection [9] supplies
 an architecturally unrelated route to counting.
 
 The property this project exploits is not accuracy but **failure-mode heterogeneity**. CLIP's
@@ -82,7 +99,7 @@ weighting scheme implicitly assumes (§3.6, and RQ4 in the paper).
 
 ### 1.4 Consensus, Weak Supervision and Silver Standards
 
-Programmatic weak supervision [7] formalised combining noisy, correlated labelling sources of
+Programmatic weak supervision [10] formalised combining noisy, correlated labelling sources of
 unknown accuracy into probabilistic labels, learning source accuracies from agreement patterns
 without ground truth. That last property is what makes it relevant here, and its central
 assumption — that sources are conditionally independent given the true label — is precisely the
@@ -102,7 +119,7 @@ caution: the JSON header identifies the artefact as an automated multi-model sil
 
 ### 1.5 Reliability and Agreement Estimation
 
-Corpus linguistics has quantified annotation trustworthiness for decades [8]. The useful import is
+Corpus linguistics has quantified annotation trustworthiness for decades [11]. The useful import is
 conceptual: agreement statistics measure the *reliability* of an annotation process, which is a
 precondition for validity but is not validity. High agreement among consistently biased annotators
 is high reliability and zero validity.
@@ -121,12 +138,12 @@ score is retained in every artefact so any downstream user can re-bin.
 
 ### 1.6 Vision-Language Models for Video Description
 
-Open-weight multimodal models — Qwen3-VL [9], InternVL3 [10] — accept interleaved image sequences
+Open-weight multimodal models — Qwen3-VL [12], InternVL3 [13] — accept interleaved image sequences
 and emit schema-constrained JSON, making a single-prompt replacement for a multi-component
 pipeline architecturally plausible. Two concerns motivated benchmarking them rather than adopting
 them.
 
-The first is hallucination [11]: fluent description of content that is not present. For a
+The first is hallucination [14]: fluent description of content that is not present. For a
 catalogue record this is worse than omission, because it is indistinguishable from a correct
 record without checking the footage.
 
@@ -141,11 +158,11 @@ result and a reviewer is entitled to the number.
 | Work | Domain | Reference standard | Reliability signal published | Modalities | What it leaves open |
 |---|---|---|---|---|---|
 | TRECVid [1] | Broadcast video | Human annotation | System scores only | Visual, some ASR | Assumes an annotation budget exists |
-| CLIP [2] | General images | Zero-shot, benchmark datasets | Softmax ranking scores | Image + text | Scores are not calibrated probabilities |
-| Whisper [3] | Speech | Human transcripts | None per-utterance | Audio | No per-segment reliability estimate |
-| Snorkel [7] | Text/structured | None required | Learned source accuracies | Text | Assumes conditional source independence |
-| Artstein & Poesio [8] | Annotated corpora | Multiple human coders | Chance-corrected agreement | Text | Human coders, not model families |
-| Qwen3-VL [9] / InternVL3 [10] | General multimodal | Benchmark suites | None | Image + text | No audio; hallucination unquantified per field |
+| CLIP [5] | General images | Zero-shot, benchmark datasets | Softmax ranking scores | Image + text | Scores are not calibrated probabilities |
+| Whisper [6] | Speech | Human transcripts | None per-utterance | Audio | No per-segment reliability estimate |
+| Snorkel [10] | Text/structured | None required | Learned source accuracies | Text | Assumes conditional source independence |
+| Artstein & Poesio [11] | Annotated corpora | Multiple human coders | Chance-corrected agreement | Text | Human coders, not model families |
+| Qwen3-VL [12] / InternVL3 [13] | General multimodal | Benchmark suites | None | Image + text | No audio; hallucination unquantified per field |
 | **This work** | Archival community TV | **None available** | **Per-field status + agreement + support set** | Audio, visual, OCR, text | **Corroboration ≠ correctness; unvalidated** |
 
 ### 1.8 Synthesis and Positioning
