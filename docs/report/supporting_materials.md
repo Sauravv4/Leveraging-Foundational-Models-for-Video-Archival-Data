@@ -250,9 +250,9 @@ verifies that the system does what it is specified to do.
   so an interrupted run cannot leave a truncated MP4 that a later run would treat as complete.
 - **Order independence.** The manifest is sorted deterministically after collection, so thread
   completion order cannot affect dataset ordering or the source-level split.
-- **`[TO FILL: boundary check.]`** Sample 10 clips, confirm that clip *n* starts exactly where clip
-  *n*−1 ends and that the reported `start_sec` matches the source timecode. Report the maximum
-  observed drift. This is the check that catches a timestamp-reset bug, and it has not been run.
+- **Boundary continuity — verified.** Across all 579 adjacent clip pairs in the manifest, the
+  maximum |`start_sec`(n) − `end_sec`(n−1)| is **0.0000 s**, mean 0.0000 s. Segment boundaries are
+  exact; no timestamp drift or reset is present.
 
 ### 3.2 Split Integrity
 
@@ -262,9 +262,8 @@ verifies that the system does what it is specified to do.
   by `assign_source_splits`, which seeds `np.random.default_rng(SEED)` and permutes a **sorted**
   unique-identifier list, so it is deterministic across runs and independent of file discovery
   order.
-- **`[TO FILL]`** Confirm programmatically that the intersection of source IDs across splits is
-  empty. The assignment builds one label per source so this should hold by construction, but it
-  is a one-line assertion and worth having in the record.
+- **Split disjointness — verified.** 9 calibration source IDs, 38 evaluation, intersection of
+  size **0**. No programme contributes clips to both sides.
 
 ### 3.3 Determinism and Resumability
 
@@ -306,10 +305,32 @@ The equal-weight scheme assumes independent families. Two pairs are not independ
 | CLIP ViT-B/32 / ViT-L/14 | Architecture, training objective, data distribution | Visual-tag agreement overstated |
 | Whisper-small / -turbo | Architecture, training data | Transcript agreement overstated |
 
-**`[TO FILL]`** Quantify this: report mean agreement within the correlated pair against mean
-agreement between an unrelated pair (e.g. Tesseract/EasyOCR, or BLIP-VQA/DETR). If the correlated
-pairs score systematically higher, the size of that gap is the inflation factor, and it belongs in
-the paper's limitations with a number attached rather than as a qualitative caveat.
+**Partially measured.** The audit runs only where the artefact stores per-model candidate lists,
+which is **keywords alone**. There the pairwise agreements are:
+
+| Pair | Mechanism | *n* | Mean agreement |
+|---|---|---|---|
+| TF-IDF / YAKE | both statistical | 624 | **0.327** |
+| KeyBERT / YAKE | embedding vs statistical | 622 | 0.108 |
+| KeyBERT / TF-IDF | embedding vs statistical | 622 | 0.078 |
+
+The two statistical extractors agree with each other roughly four times as often as either agrees
+with the embedding-based one — mechanism similarity predicting agreement, on the one field where
+it can be measured. This is the inflation effect in miniature, and it is why the keyword field's
+headline 0.173 must not be read as three-way corroboration.
+
+**Why the other fields could not be audited.** For `visual_tags`, `on_screen_text`, `people_count`
+and `transcript` the `candidates` dictionary holds *method* labels — `centre_frame_diagnostic`,
+`cross_engine_matching`, `temporal_evidence`, `temporally_persistent`, `scene_aware`,
+`model_level_votes`, `raw` — not the model families that produced them. Per-model outputs are
+consumed inside the consensus functions and not retained. So the CLIP ViT-B/32 vs ViT-L/14
+comparison, the one the limitations most need a number for, cannot be computed from the stored
+artefacts.
+
+**`[TO FILL: to close this, persist the per-family candidate lists under their model names in
+`make_consensus_field` alongside the method labels, and re-run Section 14. That single change
+would let the CLIP-pair and Whisper-pair inflation be quantified directly, converting the
+correlated-source limitation from a caveat into a measurement.]`**
 
 ### 3.7 Artefact Verification
 
@@ -453,8 +474,8 @@ five fields per clip from heterogeneous families; explicit per-field status and 
 experiments; a 7-model, 21,489-score benchmark; a read-only browser exposing the evidence.
 
 **Not delivered.** Any validity measurement (structurally impossible without a human reference);
-RQ2's agreement distribution **`[TO FILL]`**; adequately powered ablations; speaker attribution;
-the fine-tuning the notebook's rules cell describes.
+adequately powered ablations; speaker attribution; model-level provenance for the correlated-source
+audit; the fine-tuning the notebook's rules cell describes.
 
 Sub-clip temporal localisation belongs on a separate line, because it is nearer than it looks.
 `transcribe_clip` stores every Whisper segment with `start` and `end` times, and the OCR consensus
@@ -480,9 +501,23 @@ The 34-label vocabulary was authored by one person for one corpus. It encodes a 
 what is worth recording about community life in Belfast in 2016 — it contains `protest`, `police`,
 `politician` and `firefighter`, and what it omits is as consequential as what it includes, because
 a concept outside the list cannot be expressed by any model in the system. Underlying models carry
-their own web-scale training biases, which this project does not measure. **`[TO FILL: report tag
-frequency across the corpus. A label that never fires, or one that fires on most clips, is
-evidence about the vocabulary rather than about the footage.]`**
+their own web-scale training biases, which this project does not measure.
+
+**Tag frequency across the 626 clips confirms the vocabulary is badly balanced for this corpus.**
+Three labels fire on the majority of clips — `person speaking` 94.9%, `interview` 85.8%,
+`reporter` 63.4% — and therefore carry almost no discriminative information: knowing that a clip is
+tagged `person speaking` excludes almost nothing. At the other end, **two of the 34 labels never
+fire at all** (`landscape` and `rural countryside` — plausible for Northern Ireland in general,
+absent from this urban, civic-events corpus), and eight more fire on under 1.5% of clips:
+`public meeting` 1.3%, `police` 1.1%, `road` 1.0%, `stage` 0.6%, `office` 0.6%, `firefighter`
+0.5%, `fire engine` 0.2%, `hospital` 0.2%. The effective vocabulary is roughly a dozen labels,
+not 34.
+
+Three consequences follow. It inflates the benchmark's multi-label accuracy column (§4.4), because
+a model predicting only the three common labels already matches most of the reference. It shows
+the vocabulary was authored against an imagined corpus rather than this one — `fire engine` and
+`hospital` earn their places from a single clip each. And a label that never fires can never be
+wrong, so the vocabulary's apparent breadth overstates what the catalogue can actually express.
 
 ### 6.2 Privacy
 
@@ -510,9 +545,13 @@ are extracted downstream of the transcript, that nonsense propagated into the pu
 field. It is not flagged, because the keyword sources (KeyBERT, YAKE, TF-IDF) agree with each
 other about the text they were given: **three sources corroborating one another cannot detect an
 error introduced upstream of all three.** This is the clearest demonstration in the project of
-what the agreement score does not measure. **`[TO FILL: count how many clips contain non-English
-tokens in the transcript or keyword fields, and report it — this converts an anecdote into a
-measurement.]`**
+what the agreement score does not measure. **`[TO FILL: this measurement was attempted and the probe failed. Reading `asr["language"]` from
+the prediction cache returned a label for only 3 of 626 clips, all `en`, so language is not
+populated at clip level in the stored records. The Welsh-looking tokens are demonstrably present
+in the keyword field, so the right probe is lexical rather than metadata-based: scan the
+transcript and keyword strings of all 626 clips for tokens absent from an English lexicon and
+report the clip count. Until that runs, §6.3 rests on the single worked example in Appendix E.2
+and must be phrased as resting on it.]`**
 
 ### 6.4 Transparency
 
@@ -599,14 +638,19 @@ short-form, and no single programme dominates it.
 - **D.2** Perturbation robustness — paper Table IV (*n* = 5).
 - **D.3** Hosted-annotator ablation — paper Table V (*n* = 626).
 - **D.4** VLM benchmark — paper Table VI (*n* = 626, 21,489 scores).
-- **D.5** Per-field agreement distribution — **`[TO FILL]`**.
+- **D.5** Per-field agreement distribution — paper Table IV (*n* = 626, all five fields).
 - **D.6** Benchmark coverage — 626/626 on free-text and tag fields for five models; 625 (Qwen3-VL-2B-Instruct) and 624 (-2B-Thinking); people count 566–568/626.
 - **D.7** Transcript field — exactly 0.000 for InternVL3-2B, Qwen3-VL-4B-Instruct and
   Qwen3-VL-8B-Instruct; 0.013–0.034 for the rest.
-- **D.8** Per-model agreement-tier charts — Section 11 of `02_vlm_benchmark_run.ipynb` writes one
-  PNG per model (`<model>_vs_agreement_tier.png`). **`[TO FILL: the sampled rows carry
-  `agreement_tier = not_scored`. Check whether enough fields are tiered for these charts to say
-  anything; if most rows are `not_scored`, report that as the finding and drop the charts.]`**
+- **D.8** Per-model agreement-tier charts — **vacuous; do not include them.** All **21,489** rows
+  of the benchmark accuracy report carry `ground_truth_agreement_tier = not_scored`, a proportion
+  of 1.000. The cause is structural, not a bug: `build_focused_ground_truth` flattens each field to
+  its bare value via `focused_field_value`, discarding `status`, `agreement_score`,
+  `agreement_tier`, `needs_caution` and `support_models`, and the benchmark scores against that
+  flattened file. Section 11's seven PNGs plot a single constant category. Answering "does the
+  pipeline's own agreement predict how close each model gets" requires re-scoring the benchmark
+  against `ground_truth_metadata.json`, which retains the consensus dicts — a worthwhile
+  experiment that the current artefacts cannot support.
 
 ### Appendix E — Qualitative Spot-Checks
 

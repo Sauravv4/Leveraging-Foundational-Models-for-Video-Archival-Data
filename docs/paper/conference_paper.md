@@ -409,25 +409,61 @@ sized to permit policy selection without inspecting evaluation material, which i
 
 ### D. RQ2: Agreement Structure Across Fields `[Heading2]`
 
-> **`[TO FILL — this subsection has no numbers yet.]` Re-run Section 14 of
-> `notebooks/01_metadata_pipeline.ipynb` and capture the per-field agreement report. Report, for
-> each of the five fields over all 626 clips: the distribution over `observed` / `not_detected` /
-> `not_applicable` / `conflict` / `error`; the distribution over agreement tiers
-> (`high` ≥ 0.75, `moderate` ≥ 0.50, `low` < 0.50, `not_scored`); the mean agreement score; and
-> the proportion with `needs_caution = true`. This is the central RQ2 table and the paper cannot
-> be submitted without it.**
+Every published field of all 626 clips was scored. Fields are ordered by mean agreement.
 
-Two properties of this table are predictable from the design and should be stated when it is
-produced. On-screen text will show an elevated `not_detected` and `conflict` rate, because the
-dual-engine veto in III-D is deliberately conservative. And single-source fields will appear as
-`not_scored` rather than as low agreement, because one source cannot establish corroboration.
+TABLE IV. `[tablehead]` EVIDENCE STATUS AND AGREEMENT BY FIELD (*n* = 626)
+
+| Field | Families | Observed | Conflict | Not detected | High ≥ 0.75 | Moderate ≥ 0.50 | Low < 0.50 | Not scored | Mean agreement | Needs caution |
+|---|---|---|---|---|---|---|---|---|---|---|
+| People count | 4 | 0.907 | — | 0.093 | **0.625** | 0.174 | 0.109 | 0.093 | **0.812** | **0.109** |
+| Transcript | 2 | 1.000 | — | — | 0.722 | 0.045 | 0.230 | 0.003 | 0.680 | 0.233 |
+| Visual tags | 3 | 1.000 | — | — | 0.026 | 0.511 | 0.463 | 0.000 | 0.509 | 0.463 |
+| Keywords | 3 | 1.000 | — | — | 0.002 | 0.005 | **0.990** | 0.003 | **0.173** | **0.994** |
+| On-screen text | 2 | 0.467 | **0.534** | — | **0.000** | 0.005 | 0.462 | 0.534 | 0.156 | **0.995** |
+
+**Agreement tracks how independent a field's sources are, not how hard its task is.** People count
+is the best-corroborated field in the system (0.812 mean, 62.5% high agreement, 10.9% flagged for
+caution) and it has the most architecturally diverse evidence: a captioning VQA model, a
+transformer VQA model, a convolutional detector and a hosted multimodal model — four unrelated
+mechanisms converging on an integer. Visual tags, whose three families include two CLIP variants
+sharing an architecture, sit in the middle at 0.509. Keywords, whose three extractors all read the
+*same* Whisper transcript, collapse to 0.173. The ordering is the ordering of source independence.
+
+**Keywords do not meet the design's own premise, and the pairwise data shows why.** The scheme
+requires at least two independent families per field; keywords have three extractors but one
+input. Measured pairwise across the corpus they agree 0.327 (TF-IDF vs YAKE), 0.108 (KeyBERT vs
+YAKE) and 0.078 (KeyBERT vs TF-IDF) — the two statistical methods agree with each other about four
+times as often as either agrees with the embedding-based one, and none agrees much. 99.0% of
+keyword fields land in the lowest tier and 99.4% carry `needs_caution`. These are three ranking
+functions over one text, not three sources of evidence, and the corroboration they produce is
+close to uninformative. Section V-C treats this as a design fault rather than a result about the
+footage.
+
+**On-screen text is either vetoed or weakly corroborated, and never confidently published.** The
+strict dual-engine rule puts **53.4% of clips into `conflict`**; of the 46.6% that publish a
+value, **not one reaches high agreement**, and the mean is 0.156. Read alongside Section IV-G,
+where all seven benchmark models recovered a station ident this field left empty, the picture is
+consistent: the field withholds a great deal, and what survives is barely corroborated. That is
+the intended trade — a hallucinated headline is worse than a missing one — but the cost is now
+quantified on both sides.
+
+**Transcript's 0.680 is the number to trust least.** 72.2% of clips reach high agreement, second
+best in the table, but the two sources are Whisper-small and Whisper-turbo, the most correlated
+pair in the system. This is exactly the inflation Section V-C warns about, and it is why the
+ordering above should be read as evidence about the *sources* rather than as a league table of
+field quality.
+
+**The caution flag is informative on three fields and saturated on two.** At 10.9% (people count),
+23.3% (transcript) and 46.3% (visual tags) it directs attention usefully. At 99.4% and 99.5% for
+keywords and on-screen text it flags essentially everything, which is the same as flagging
+nothing. Triage works only where corroboration is real.
 
 ### E. RQ3: Perturbation Robustness `[Heading2]`
 
 Five calibration clips were degraded and the visual verifier re-run against its original
 centre-frame evidence.
 
-TABLE IV. `[tablehead]` STABILITY UNDER VISUAL DEGRADATION (*n* = 5)
+TABLE V. `[tablehead]` STABILITY UNDER VISUAL DEGRADATION (*n* = 5)
 
 | Perturbation | OCR stability | Tag stability | People-count stability | Mean |
 |---|---|---|---|---|
@@ -455,7 +491,7 @@ present but unreadable", and this experiment quantifies how often that distincti
 Two distinct quantities are separated here: how often the hosted annotator *agrees with* the
 local-only consensus, and how often adding it *changes* the published output. Neither is accuracy.
 
-TABLE V. `[tablehead]` HOSTED-ANNOTATOR ABLATION (*n* = 626)
+TABLE VI. `[tablehead]` HOSTED-ANNOTATOR ABLATION (*n* = 626)
 
 | Field | Candidate coverage | Exact output-change rate | Mean candidate vs local agreement | Local vs augmented stability |
 |---|---|---|---|---|
@@ -486,7 +522,7 @@ Seven models were run zero-shot over all 626 clips under a protocol held constan
 producing **21,489 (model, clip, field) scores**. Thinking variants received a larger token budget
 (1400 vs 700) to accommodate their reasoning trace, and both 8B models ran int4-quantised.
 
-TABLE VI. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 626)
+TABLE VII. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 626)
 
 | Model | On-screen text (R-L) | Keywords (R-L) | Visual tags (acc.) | People count (acc.) | Transcript (R-L) |
 |---|---|---|---|---|---|
@@ -545,18 +581,21 @@ The text was present; the strict dual-engine rule of III-D rejected it. On a sec
 reference held the fragment `TIVAL` while the models returned the full theatre poster — title,
 author, director, dates, box-office number. In both cases ROUGE-L recall scores the models
 *against* a reference that is less complete than they are. The veto buys precision on this field,
-Table V confirms it is never overridden, and these examples put a visible price on it. Absent a
+Table VI confirms it is never overridden, and these examples put a visible price on it. Absent a
 human reference the trade cannot be quantified, only demonstrated — which is itself an argument
 for collecting one.
 
 ### H. Anticipated versus Actual Results `[Heading2]`
 
-TABLE VII. `[tablehead]` ANTICIPATED VERSUS ACTUAL
+TABLE VIII. `[tablehead]` ANTICIPATED VERSUS ACTUAL
 
 | # | Anticipated | Actual | Verdict |
 |---|---|---|---|
 | RQ1 | More frames raise coverage and stability together | Coverage up (23.0 vs 14.5 items), stability **down** (0.5318 vs 1.0) | Partly refuted |
 | RQ1 | Fixed three-frame sits between centre and scene-aware | Fixed three-frame is **worst** on OCR coverage (3.0) | Refuted |
+| RQ2 | Agreement will be highest where the task is easiest | Highest where the sources are most independent | Refuted |
+| RQ2 | Three keyword extractors give three-way corroboration | 0.173 mean, 99.0% low — one input, three views | Refuted |
+| RQ2 | The OCR veto is conservative | 53.4% conflict; no clip reaches high agreement | Confirmed |
 | RQ3 | Degradation reduces all fields comparably | 13-fold spread: tags 0.96, OCR 0.07 under blur | Refuted |
 | RQ4 | A third annotator mostly corroborates | Agrees 0.42 on tags yet changes 49.0% of them | Refuted |
 | RQ4 | OCR veto holds | Change rate exactly 0.0000 | Confirmed |
@@ -576,7 +615,11 @@ empirical expectation about scale, deliberation and frame budget was wrong.
 
 The organising finding is that **reliability is a per-field property, not a system property**, and
 that the mechanisms differ enough that a single confidence number for a clip would be actively
-misleading. Blur destroys OCR (0.07) and leaves tagging intact (0.96) because the two depend on
+misleading. RQ2 sharpens it: the per-field agreement scores rank the five fields in the order of
+how architecturally independent their evidence sources are — four unrelated families for people
+count (0.812), a mixed trio for visual tags (0.509), three views of one transcript for keywords
+(0.173). The agreement score is therefore measuring a property of the *ensemble* at least as much
+as a property of the footage, which is a real constraint on how it should be read. Blur destroys OCR (0.07) and leaves tagging intact (0.96) because the two depend on
 different spatial frequencies. A third annotator is redundant for people count (0.8445 agreement,
 1.8% change) and decisive for visual tags (0.4194 agreement, 49.0% change) because integer
 counting has a narrow answer space that independent families converge on, while a 34-label
@@ -626,10 +669,18 @@ place.
    cannot be adjudicated without one.
 2. **Underpowered experiments.** RQ1 uses 8 clips and RQ3 uses 5. Both are directionally clear and
    neither supports a significance claim.
-3. **RQ2 is not yet reported.** The agreement distribution table is outstanding **`[TO FILL]`**.
-4. **Correlated sources.** CLIP ViT-B/32 and ViT-L/14 share architecture and training objective;
-   Whisper-small and -turbo share both. Agreement between them overstates independence, inflating
-   scores on transcript and visual tags relative to fields whose sources are genuinely unrelated.
+3. **Vocabulary concentration.** Three of the 34 visual labels fire on 63–95% of clips and two
+   never fire at all, so the closed vocabulary carries far less discriminative information than
+   its size suggests.
+4. **Correlated sources, and one field with no independent sources at all.** CLIP ViT-B/32 and
+   ViT-L/14 share architecture and training objective; Whisper-small and -turbo share both, which
+   inflates transcript and visual-tag agreement relative to fields whose sources are unrelated.
+   Keywords are worse than correlated: KeyBERT, YAKE and TF-IDF all consume the same Whisper
+   transcript, so the field has one source and three views of it. Its 0.173 mean agreement is a
+   consequence of the design, not a measurement of the corpus, and any claim resting on keyword
+   corroboration should be discounted accordingly. The size of the CLIP-pair inflation could not
+   be measured, because the artefact stores method-level rather than model-level candidate lists
+   for visual tags.
 5. **Quantisation confound.** Both 8B benchmark models ran int4 while smaller models ran at full
    precision. The 8B rows are not on equal footing.
 6. **Protocol asymmetry.** Thinking models receive a forced-conclusion retry that Instruct models
@@ -657,8 +708,12 @@ This work delivers a reliability-aware metadata pipeline for an archival communi
 corpus: 47 programmes segmented into 626 clips with zero failures, five fields per clip generated
 by heterogeneous pretrained families, and every published value carrying an evidence status, its
 supporting models and a self-similarity-free agreement score. Four experiments characterise it,
-and the useful findings are mostly the ones that contradicted expectation — coverage and stability
-trade against each other under scene-aware sampling (23.0 vs 14.5 OCR items, stability 0.53);
+and the useful findings are mostly the ones that contradicted expectation. Per-field agreement
+ranks the five fields by how independent their evidence is rather than by task difficulty — 0.812
+for the four-family people count against 0.173 for keywords, whose three extractors share one
+input — while on-screen text ends in conflict on 53.4% of clips and reaches high agreement on
+none. Coverage and agreement trade against each other under scene-aware sampling (eight times the
+filtered OCR of fixed three-frame sampling, at the lowest stability of the three policies);
 robustness is field-specific to a 13-fold degree (0.96 tags vs 0.07 OCR under blur); a third
 annotator rewrites 49.0% of visual-tag sets while agreeing with the local consensus only 42% of
 the time, and is vetoed on 100% of OCR decisions by design; and across seven open-weight
