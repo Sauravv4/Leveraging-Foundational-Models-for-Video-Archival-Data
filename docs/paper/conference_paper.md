@@ -35,7 +35,7 @@ stability held at 0.96 while text stability fell to 0.07; the hosted annotator r
 visual-tag sets while agreeing with the local consensus 0.42 of the time, and changed 0.0% of
 on-screen text, which strict dual-engine consensus vetoes by design. Across seven open-weight
 vision-language models — Qwen3-VL 2B/4B/8B in Instruct and Thinking variants, InternVL3-2B and
--8B — and 21,140 scores, InternVL3-2B led three of five fields and every model scored at or near
+-8B — and 21,489 scores, InternVL3-2B led three of five fields and every model scored at or near
 zero on transcript. Reliability is a per-field property, and corroboration is reported as
 corroboration, not correctness.
 
@@ -226,12 +226,10 @@ TABLE I. `[tablehead]` CORPUS AND SEGMENTATION
 | Clips generated | 626 |
 | Clip creation failures | 0 |
 | Calibration / evaluation sources | 9 / 38 |
-| Clips scored in the VLM benchmark | 615 |
+| Clips scored in the VLM benchmark | 626 |
 | Clips per programme (range) | 10 – 22 |
 
-> **`[TO FILL: total corpus duration in hours; mean and SD of clips per programme; and the
-> reconciliation between the 626 clips generated and the 615 in `ground_truth_metadata_615.json`
-> used by the benchmark — state the reason for the 11-clip difference explicitly.]`**
+> **`[TO FILL: total corpus duration in hours; mean and SD of clips per programme.]`**
 
 ### B. Fields and Evidence Sources `[Heading2]`
 
@@ -459,56 +457,73 @@ and that a deployment which cannot tolerate that should run local-only, which th
 
 ### G. RQ5: Open-Weight VLM Benchmark `[Heading2]`
 
-Seven models were run zero-shot over 615 clips under a protocol held constant across models:
+Seven models were run zero-shot over all 626 clips under a protocol held constant across models:
 4 uniformly sampled frames, identical prompt, greedy decoding, the same 34-label vocabulary,
-producing **21,140 (model, clip, field) scores**. Thinking variants received a larger token budget
+producing **21,489 (model, clip, field) scores**. Thinking variants received a larger token budget
 (1400 vs 700) to accommodate their reasoning trace, and both 8B models ran int4-quantised.
 
-TABLE VI. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 615)
+TABLE VI. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 626)
 
 | Model | On-screen text (R-L) | Keywords (R-L) | Visual tags (acc.) | People count (acc.) | Transcript (R-L) |
 |---|---|---|---|---|---|
-| Qwen3-VL-2B-Instruct | 0.377 | 0.038 | 0.864 | 0.225 | 0.034 |
-| Qwen3-VL-2B-Thinking | 0.382 | 0.028 | 0.876 | 0.321 | 0.018 |
-| Qwen3-VL-4B-Instruct | 0.448 | 0.030 | 0.875 | 0.239 | 0.000 |
-| Qwen3-VL-4B-Thinking | 0.386 | **0.040** | 0.867 | 0.307 | 0.018 |
-| Qwen3-VL-8B-Instruct † | 0.433 | 0.036 | 0.869 | 0.227 | 0.000 |
-| **InternVL3-2B** | **0.566** | 0.030 | **0.895** | **0.404** | 0.000 |
-| InternVL3-8B † | 0.410 | 0.026 | 0.878 | 0.354 | 0.013 |
+| Qwen3-VL-2B-Instruct | 0.383 | 0.039 | 0.871 | 0.233 | **0.034** |
+| Qwen3-VL-2B-Thinking | 0.384 | 0.028 | 0.874 | 0.323 | 0.018 |
+| Qwen3-VL-4B-Instruct | 0.456 | 0.030 | 0.880 | 0.241 | 0.000 |
+| Qwen3-VL-4B-Thinking | 0.389 | **0.040** | 0.873 | 0.315 | 0.019 |
+| Qwen3-VL-8B-Instruct † | 0.431 | 0.036 | 0.876 | 0.232 | 0.000 |
+| **InternVL3-2B** | **0.544** | 0.031 | **0.890** | **0.417** | 0.000 |
+| InternVL3-8B † | 0.416 | 0.027 | 0.883 | 0.366 | 0.013 |
 
-† int4-quantised; not on equal footing with the bf16/fp16 models. Coverage is 615/615 clips for
-every model on every field except people count (560/615, where the reference count could not be
-parsed).
+† int4-quantised; not on equal footing with the bf16/fp16 models. Coverage is 626/626 clips on the
+free-text and tag fields for five of seven models (Qwen3-VL-2B-Instruct 625, -2B-Thinking 624,
+where output could not be parsed as JSON) and 566–568/626 on people count, where the reference
+count could not be parsed.
 
 **Scale does not predict agreement.** The smallest model in the study, InternVL3-2B, leads three of
-five fields — on-screen text (0.566, 26% above the best Qwen at 0.448), visual tags (0.895) and
-people count (0.404, 26% above the best Qwen at 0.321) — and beats InternVL3-8B, its own larger
+five fields — on-screen text (0.544, 19% above the best Qwen at 0.456), visual tags (0.890) and
+people count (0.417, 29% above the best Qwen at 0.323) — and beats InternVL3-8B, its own larger
 sibling, on all three. The 8B Qwen does not lead any field. Quantisation confounds the two 8B
 results and they should not be used to argue that scale *hurts*; the defensible claim is narrower
 and still useful: **at this task, on this corpus, a 2B model was sufficient, and paying for 8B
 bought nothing measurable.**
 
-**Thinking variants do not dominate their Instruct siblings.** At 2B, Thinking is ahead on tags
-(0.876 vs 0.864) and markedly ahead on people count (0.321 vs 0.225); at 4B it is behind on
-on-screen text (0.386 vs 0.448) and tags (0.867 vs 0.875) and ahead on people count
-(0.307 vs 0.239). Deliberation helps the field requiring enumeration and does not help the
-perceptual fields. A further asymmetry must be disclosed: Thinking models alone receive a
-forced-conclusion retry when the first pass exhausts its budget without emitting JSON. This
-recovers data rather than altering answers, but it is not an identical protocol.
+**Thinking variants do not dominate their Instruct siblings.** At 2B, Thinking is level on
+on-screen text (0.384 vs 0.383) and tags (0.874 vs 0.871) but markedly ahead on people count
+(0.323 vs 0.233); at 4B it is behind on on-screen text (0.389 vs 0.456) and tags
+(0.873 vs 0.880) and ahead on people count (0.315 vs 0.241). Deliberation helps the field
+requiring enumeration and does not help the perceptual fields. A further asymmetry must be
+disclosed: Thinking models alone receive a forced-conclusion retry when the first pass exhausts
+its budget without emitting JSON. This recovers data rather than altering answers, but it is not
+an identical protocol, and it is the two Thinking-family models that nonetheless lost clips to
+parse failure.
 
 **Transcript is at or near zero for every model (0.034 to 0.000), as predicted.** None of these
 models accepts audio, so the field measures how much speech content is recoverable from vision
-alone. The answer is: essentially none. Qwen3-VL-4B-Instruct returned an **empty transcript on 613
-of 615 clips**, scored non-zero on 1, and peaked at 0.088 — the model correctly declining to invent
-dialogue, penalised at 0.0 for doing so by a recall metric that cannot distinguish honest
-abstention from failure. This is a disclosed design decision and a quantified finding: speech is
-the one field in this pipeline that a vision-only model cannot replace, and the 0.000 entries are
-evidence of the modality gap rather than of model failure.
+alone. The answer is: essentially none. Three models — InternVL3-2B, Qwen3-VL-4B-Instruct and
+Qwen3-VL-8B-Instruct — score exactly 0.000, returning an empty string rather than inventing
+dialogue; the qualitative spot-checks confirm this is abstention, not failure to respond. A recall
+metric cannot distinguish an honest abstention from a wrong answer, so both score 0.0. This is a
+disclosed design decision and a quantified finding: speech is the one field in this pipeline that
+a vision-only model cannot replace.
 
-**Keywords are near zero (0.026–0.040) for a different and less interesting reason.** The
+**Keywords are near zero (0.027–0.040) for a different and less interesting reason.** The
 comparison is not like-for-like: reference keywords are extracted from the *transcript*, while
-each model's keywords come from *frames*. This column measures the same modality gap as the
-transcript column, indirectly, and should not be read as a keyword-extraction result.
+each model's keywords come from *frames*. The spot-checks make the mismatch concrete — against a
+reference of `medication`, `population`, `Northern Ireland` the models returned `interview`,
+`talk show format`, `studio set`. Both describe the clip correctly; they describe different
+modalities of it. This column measures the same modality gap as the transcript column, indirectly,
+and should not be read as a keyword-extraction result.
+
+**The benchmark also exposes a false-negative cost in the pipeline's OCR veto.** On a clip whose
+reference on-screen text was empty, all seven models independently read the station ident
+*NVTV / BELFAST LOCAL TELEVISION*, with only single-character disagreements (`NVTW`, `NVTY`).
+The text was present; the strict dual-engine rule of III-D rejected it. On a second clip the
+reference held the fragment `TIVAL` while the models returned the full theatre poster — title,
+author, director, dates, box-office number. In both cases ROUGE-L recall scores the models
+*against* a reference that is less complete than they are. The veto buys precision on this field,
+Table V confirms it is never overridden, and these examples put a visible price on it. Absent a
+human reference the trade cannot be quantified, only demonstrated — which is itself an argument
+for collecting one.
 
 ### H. Anticipated versus Actual Results `[Heading2]`
 
@@ -523,7 +538,7 @@ TABLE VII. `[tablehead]` ANTICIPATED VERSUS ACTUAL
 | RQ4 | OCR veto holds | Change rate exactly 0.0000 | Confirmed |
 | RQ5 | Larger models agree more with the consensus | InternVL3-2B leads 3 of 5 fields | Refuted |
 | RQ5 | Thinking variants beat Instruct | Split by field; ahead only on people count | Partly refuted |
-| RQ5 | Vision-only transcript will be near zero | 0.034 to 0.000; 613/615 empty for 4B-Instruct | Confirmed |
+| RQ5 | Vision-only transcript will be near zero | 0.034 to 0.000; three models exactly 0.000 | Confirmed |
 
 Six of eight anticipated outcomes were refuted or partly refuted. The two confirmed are the two
 that follow deductively from the design (the OCR veto) or from the modality (transcript). Every
@@ -555,9 +570,16 @@ exactly the independent reference this project could not collect.
 
 The benchmark's near-zero transcript column is the cleanest result in the paper because it is the
 one where the ground truth is not in doubt. Whisper hears speech; a vision-language model looking
-at four frames cannot. Quantifying that at 613 empty predictions out of 615 puts a number on why
-this pipeline is multi-component rather than a single prompt to a large multimodal model — which
-is, in 2026, the obvious alternative design and the one a reviewer will ask about.
+at four frames cannot, and three of the seven abstain outright rather than guess. That is why this
+pipeline is multi-component rather than a single prompt to a large multimodal model — which is, in
+2026, the obvious alternative design and the one a reviewer will ask about.
+
+The benchmark's least comfortable result runs the other way. Where the models and the pipeline
+disagree on on-screen text, the spot-checks show the models are sometimes right and the reference
+wrong — a station ident every model read and the veto discarded. The agreement score cannot see
+this, because it measures corroboration among the pipeline's own sources and the veto removes the
+candidate before any scoring happens. A conservative rule is still the right default for a field
+where hallucination is unrecoverable, but its cost is real and, on this evidence, not small.
 
 ### B. Implications `[Heading2]`
 
@@ -611,8 +633,8 @@ trade against each other under scene-aware sampling (23.0 vs 14.5 OCR items, sta
 robustness is field-specific to a 13-fold degree (0.96 tags vs 0.07 OCR under blur); a third
 annotator rewrites 49.0% of visual-tag sets while agreeing with the local consensus only 42% of
 the time, and is vetoed on 100% of OCR decisions by design; and across seven open-weight
-vision-language models and 21,140 scores, a 2B model leads three of five fields while every model
-scores at or near zero on transcript, with 613 of 615 predictions empty for one of them.
+vision-language models and 21,489 scores, a 2B model leads three of five fields while every model
+scores at or near zero on transcript, three of them abstaining outright.
 
 **Future work.** (i) Collect a small human-annotated reference — a few hundred clips is enough —
 which converts every agreement number here into a validity measurement and settles the RQ4 tag

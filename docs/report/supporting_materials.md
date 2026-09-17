@@ -132,9 +132,9 @@ record without checking the footage.
 
 The second is the modality gap. None of these models accepts audio. A pipeline component that
 transcribes speech cannot be replaced by a model that cannot hear it — a claim that is obvious
-stated plainly and that the benchmark nonetheless quantifies (0.000–0.034 ROUGE-L; 613 of 615
-predictions empty for Qwen3-VL-4B-Instruct), because "obvious" is not a result and a reviewer is
-entitled to the number.
+stated plainly and that the benchmark nonetheless quantifies (0.000–0.034 ROUGE-L, with three of
+seven models scoring exactly 0.000 by abstaining rather than guessing), because "obvious" is not a
+result and a reviewer is entitled to the number.
 
 ### 1.7 Comparative Literature Matrix
 
@@ -201,7 +201,7 @@ Built as three notebooks (`notebooks/`):
 | Notebook | Role |
 |---|---|
 | `01_metadata_pipeline.ipynb` | Clip creation, all five fields, verifier phases, hosted annotator, ablations, robustness, agreement scoring, focused export, Flask browser |
-| `02_vlm_benchmark_run.ipynb` | Runs seven VLMs over the clips, one at a time, checkpointed and resumable |
+| `02_vlm_benchmark_run.ipynb` | Runs seven VLMs over all 626 clips, one at a time, checkpointed and resumable; also scores them, builds the comparison and coverage tables, the per-model agreement-tier charts and the qualitative spot-checks |
 | `03_vlm_benchmark_comparison.ipynb` | Loads cached predictions only; scores and builds the comparison tables. Loads no models |
 
 The third notebook exists because of a lesson learned the hard way (§5.3): separating scoring from
@@ -218,7 +218,7 @@ produced non-deterministic failures.
 
 Four experiments, all specified before results were inspected: the frame-sampling ablation
 (calibration subset, *n* = 8); perturbation robustness (*n* = 5); the hosted-annotator contribution
-ablation (*n* = 626); and the VLM benchmark (*n* = 615, 21,140 scores).
+ablation (*n* = 626); and the VLM benchmark (*n* = 626, 21,489 scores).
 
 The ablation and robustness sample sizes were set by runtime, and both are underpowered. They were
 run on the calibration split specifically so that a policy could be chosen without inspecting
@@ -230,8 +230,9 @@ reported with sample sizes in the table captions so no reader can mistake their 
 Per-clip checkpointing made iteration cheap: a change to the agreement rules re-ran scoring without
 re-running inference. Failures were recorded against clip identifiers rather than suppressed —
 the final pipeline run recorded 626 successes and 0 failures, and the benchmark recorded which
-clips each model was actually scored on (615/615 on every field except people count at 560/615)
-so that a score computed from fewer clips is visible rather than hidden.
+clips each model was actually scored on (626/626 for five of seven models on the free-text and tag
+fields, 625 and 624 for the two that lost clips to JSON parse failure, and 566–568/626 on people
+count) so that a score computed from fewer clips is visible rather than hidden.
 
 ---
 
@@ -312,9 +313,14 @@ the paper's limitations with a number attached rather than as a qualitative cave
 - Prediction caches carry a `prompt_version`; a cache whose version does not match is ignored
   rather than silently mixed with current results — this is checked at load time in
   `03_vlm_benchmark_comparison.ipynb`.
-- **`[TO FILL]`** Confirm that clip IDs in `ground_truth_metadata_615.json`, the embeddings/frames
-  on disk and the prediction caches are a three-way exact match, and reconcile 626 generated
-  against 615 scored.
+- **Resolved.** The benchmark's final run reads a 626-clip ground truth and reports 626 clips
+  total, 626 usable and 626 with a video file on disk — a three-way match between the ground
+  truth, the clips on disk and the manifest. The earlier 615-clip file is superseded; no result
+  in either document now depends on it.
+- The prediction cache for Qwen3-VL-4B-Thinking carries four `backup_before_repair_*` snapshots
+  (2026-09-11 through 2026-09-14). **`[TO FILL: state what the repair corrected and confirm the
+  reported scores come from the post-repair cache.]`** A results file with an undocumented repair
+  history is the kind of thing an examiner asks about.
 
 ---
 
@@ -387,8 +393,11 @@ was run, or run those sections and add the results. The current mismatch between
 stated method and its executed content is the kind of discrepancy an examiner will notice, and it
 is better resolved than explained.]`**
 
-**Two corpus sizes.** The pipeline generated 626 clips; the benchmark scored 615. **`[TO FILL:
-reconcile, and state the reason in both documents.]`**
+**Two corpus sizes, resolved.** An earlier benchmark run scored 615 clips against
+`ground_truth_metadata_615.json` while the pipeline had generated 626. The final run rebuilt the
+benchmark against the full 626-clip ground truth, and both documents now report 626 throughout.
+The earlier numbers differ only in the third decimal place and no conclusion changed, but the
+superseded run should not be cited.
 
 ### 5.2 Design Rationale
 
@@ -435,7 +444,7 @@ detector.
 
 **Delivered.** A resumable, checkpointed, provenance-tracked pipeline; 626 clips at zero failures;
 five fields per clip from heterogeneous families; explicit per-field status and agreement; four
-experiments; a 7-model, 21,140-score benchmark; a read-only browser exposing the evidence.
+experiments; a 7-model, 21,489-score benchmark; a read-only browser exposing the evidence.
 
 **Not delivered.** Any validity measurement (structurally impossible without a human reference);
 RQ2's agreement distribution **`[TO FILL]`**; adequately powered ablations; retrieval evaluation;
@@ -478,9 +487,19 @@ distribution under-represented in training data relative to General American. Tr
 therefore likely to be systematically lower here than published WER figures suggest, and *that
 error is not random*: it will fall hardest on speakers with the strongest regional accents, who in
 a community archive are often the community members the archive exists to represent. The project
-does not measure this, which is a real gap rather than a formality. **`[TO FILL: if the SYNOPSES
-folder contains any human transcript, compare WER on those clips against Whisper's published
-English WER and report the difference.]`**
+does not measure this systematically, which is a real gap rather than a formality.
+
+The benchmark spot-checks contain direct evidence that the problem is live. On a Belfast arts clip
+the pipeline's own reference keywords, derived from the Whisper transcript, include `pethau felly`,
+`cyfnodau yw` and `custinia rheidd` — Welsh-looking strings with no Welsh in the audio. Whisper has
+mis-identified the language on accented English and produced fluent nonsense, and because keywords
+are extracted downstream of the transcript, that nonsense propagated into the published catalogue
+field. It is not flagged, because the keyword sources (KeyBERT, YAKE, TF-IDF) agree with each
+other about the text they were given: **three sources corroborating one another cannot detect an
+error introduced upstream of all three.** This is the clearest demonstration in the project of
+what the agreement score does not measure. **`[TO FILL: count how many clips contain non-English
+tokens in the transcript or keyword fields, and report it — this converts an anecdote into a
+measurement.]`**
 
 ### 6.4 Transparency
 
@@ -552,19 +571,73 @@ programming, education and youth forums. Clips per programme range 10–22.
 - **D.1** Frame-sampling ablation — paper Table III (*n* = 8).
 - **D.2** Perturbation robustness — paper Table IV (*n* = 5).
 - **D.3** Hosted-annotator ablation — paper Table V (*n* = 626).
-- **D.4** VLM benchmark — paper Table VI (*n* = 615, 21,140 scores).
+- **D.4** VLM benchmark — paper Table VI (*n* = 626, 21,489 scores).
 - **D.5** Per-field agreement distribution — **`[TO FILL]`**.
-- **D.6** Benchmark coverage — 615/615 all fields except people count 560/615, all seven models.
-- **D.7** Transcript-field breakdown, Qwen3-VL-4B-Instruct — mean 0.00014347; 613/615 empty
-  predictions; 1 non-zero score; maximum 0.0882.
+- **D.6** Benchmark coverage — 626/626 on free-text and tag fields for five models; 625 (Qwen3-VL-2B-Instruct) and 624 (-2B-Thinking); people count 566–568/626.
+- **D.7** Transcript field — exactly 0.000 for InternVL3-2B, Qwen3-VL-4B-Instruct and
+  Qwen3-VL-8B-Instruct; 0.013–0.034 for the rest.
+- **D.8** Per-model agreement-tier charts — Section 11 of `02_vlm_benchmark_run.ipynb` writes one
+  PNG per model (`<model>_vs_agreement_tier.png`). **`[TO FILL: the sampled rows carry
+  `agreement_tier = not_scored`. Check whether enough fields are tiered for these charts to say
+  anything; if most rows are `not_scored`, report that as the finding and drop the charts.]`**
 
 ### Appendix E — Qualitative Spot-Checks
 
-**`[TO FILL: 5–8 clips, each with the reference metadata alongside every model's prediction, and
-one sentence on what the example shows. Include at least one clip where the hosted annotator
-changed the visual tags, since that is the paper's most consequential unresolved result — the
-qualitative evidence is what a reader will want when the quantitative evidence cannot settle it.
-Section 12 of `02_vlm_benchmark_run.ipynb` produces these.]`**
+From Section 12 of `02_vlm_benchmark_run.ipynb`, which prints the reference metadata beside every
+model's prediction. Two clips are reproduced here because each shows something the aggregate
+tables cannot.
+
+**E.1 — `11_Poor_Mental_Health_on_Peace_Lines_150416…clip0003`: the OCR veto's false negatives.**
+
+| Source | On-screen text |
+|---|---|
+| Reference (pipeline) | *(empty)* |
+| InternVL3-2B | `NVTV`, `BELFAST LOCAL TELEVISION` |
+| InternVL3-8B | `NVTW BELFAST LOCAL TELEVISION` |
+| Qwen3-VL-2B-Instruct | `NVTV`, `BELFAST LOCAL TELEVISION` |
+| Qwen3-VL-2B-Thinking | `NVTV`, `BELFAST LOCAL TELEVISION` |
+| Qwen3-VL-4B-Instruct | `NVTV`, `BELFAST LOCAL TELEVISION` |
+| Qwen3-VL-4B-Thinking | `NVTV`, `BELFAST LOCAL TELEVISION` |
+| Qwen3-VL-8B-Instruct | `NVTY`, `BELFAST LOCAL TELEVISION` |
+
+All seven models read the station ident; the published reference is empty. Disagreement between
+them is confined to one character of the call sign. The text was on screen and the strict
+dual-engine rule rejected it — the clearest available illustration of what the veto costs, and a
+case where every model is penalised by ROUGE-L for being more accurate than the reference.
+
+The same clip also shows the keyword modality mismatch. Reference (from the transcript):
+`medication`, `population`, `Northern Ireland`, `peaceline areas`. Models (from frames):
+`interview`, `talk show format`, `studio audience`, `Belfast cityscape`. Both are correct
+descriptions of different modalities of the same 30 seconds.
+
+And the transcript field: against a 90-word reference on a population-wide medication study,
+InternVL3-2B, InternVL3-8B, Qwen3-VL-4B-Instruct and Qwen3-VL-8B-Instruct returned an empty
+string, while the three Qwen variants that did answer produced generic visual paraphrase — *"The
+interviewer is asking a question about local issues."* Neither behaviour recovers the content;
+only the first is honest about it.
+
+**E.2 — `20_Writers_on_Writers_Festival_100516…clip0004`: reference fragmentation, and a Whisper
+failure.**
+
+The reference on-screen text is the single fragment `TIVAL` — the tail of "FESTIVAL" caught by the
+dual-engine rule. The models returned the theatre poster in the frame: *THE BELLE OF THE BELFAST
+CITY*, *BY CHRISTINA REID*, director, designer, ticket prices, run dates and the box-office
+number. Qwen3-VL-8B-Instruct additionally recovered a pull-quote. Recall against `TIVAL` cannot
+express any of this.
+
+This clip also contains the fairness evidence discussed in §6.3. The reference keywords are
+`Reid`, `Christina Reid`, `Belfast Street`, `pethau felly`, `cyfnodau yw`, `custinia rheidd` —
+the last three Welsh-looking strings produced by Whisper on Northern Irish accented English, then
+carried into the published keyword field by all three keyword extractors without any source
+disagreeing.
+
+People count on this clip is the opposite case: reference 1, and all seven models 1. Where the
+evidence is unambiguous, independent systems converge exactly — which is the premise the whole
+agreement design rests on.
+
+**`[TO FILL: add 3–4 more clips, chosen to include at least one where the hosted annotator changed
+the published visual tags (paper §IV-F), since that is the most consequential unresolved result
+and the aggregate numbers cannot settle it.]`**
 
 ### Appendix F — Reproduction
 
