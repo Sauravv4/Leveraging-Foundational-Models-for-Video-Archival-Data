@@ -166,7 +166,17 @@ exemplars do, and it is what makes a 40-page report navigable.
 
 ---
 
-## 5. What is still needed before writing
+## 5. Status
+
+Drafts now exist for both deliverables, written against the executed notebooks:
+
+- `paper/conference_paper.md`
+- `report/supporting_materials.md`
+
+The list below was written before those drafts and is superseded by the
+`[TO FILL]` markers inside them, which are specific to what each section needs.
+
+## 5b. Original gap list
 
 - [ ] Corpus statistics: programmes, total hours, clip count, clips per programme.
 - [ ] An evaluation set — a labelled sample of clips, or a set of retrieval

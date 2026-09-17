@@ -61,10 +61,16 @@ output/
 
 ## Write-up
 
-The research paper and supporting-materials report are planned in
-[`docs/WRITING_GUIDE.md`](docs/WRITING_GUIDE.md), built from the exemplar
-submissions and the IEEE conference template kept in
-[`docs/references/`](docs/references/README.md).
+| Document | Path |
+|---|---|
+| Conference paper (IEEE, draft) | [`docs/paper/conference_paper.md`](docs/paper/conference_paper.md) |
+| Supporting-materials report (draft) | [`docs/report/supporting_materials.md`](docs/report/supporting_materials.md) |
+| Section plan and conventions | [`docs/WRITING_GUIDE.md`](docs/WRITING_GUIDE.md) |
+| Exemplars + IEEE template | [`docs/references/`](docs/references/README.md) |
+
+Both drafts are written from the executed notebooks in `notebooks/`. Every
+number in them is traceable to a cell output; anything not yet measured is
+marked `[TO FILL]` rather than estimated.
 
 ---
 
