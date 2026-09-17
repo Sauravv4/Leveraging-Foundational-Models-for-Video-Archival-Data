@@ -108,8 +108,13 @@ them.
   branch is evaluated.
 - **Closed visual vocabulary.** Visual tags are restricted to 34 labels chosen for this corpus.
   A concept outside that list cannot be expressed, by any model, by construction.
-- **No retrieval evaluation.** A read-only browser over the generated metadata is delivered, but
-  no retrieval effectiveness measure (precision@k, nDCG, user study) is reported.
+- **No temporal localisation within a clip.** Every field is published at clip granularity. The
+  record states that a caption, a speaker or an activity is present in a given 30 seconds, never
+  where inside it. On-screen text is probed densely across frames, but the persistence rule
+  collapses the result to one clip-level list and the frame offsets are discarded.
+- **No speaker attribution.** Whisper produces one undifferentiated transcript per clip. No
+  diarisation, speaker counting or voice identification is attempted, so on the panel discussions
+  and interviews that make up much of this corpus the record cannot say who said what.
 
 ### D. Research Questions `[Heading2]`
 
@@ -618,7 +623,12 @@ place.
    establishes generalisation to other archives.
 10. **Single run.** Greedy decoding, one run per model, no variance estimate over seeds or prompt
     phrasings.
-11. **No retrieval evaluation.** The browser is delivered but its effectiveness is unmeasured.
+11. **Corroboration is blind to upstream error.** Keywords are extracted from the transcript, so
+    an ASR failure propagates into them with every keyword source agreeing, because all three read
+    the same faulty text. Section IV-G documents a clip where Whisper mis-identified the language
+    on accented English and the resulting spurious tokens entered the published keyword field at
+    full agreement. Any field derived from another field inherits its errors and reports them as
+    corroborated; the design has no mechanism to detect this.
 
 ---
 
@@ -641,9 +651,12 @@ which converts every agreement number here into a validity measurement and settl
 question. (ii) Replace equal family weights with measured per-source reliability, for which the
 provenance machinery is already in place. (iii) Add an audio-capable multimodal model to the
 benchmark, so the transcript column tests a model that was given the information the task
-requires. (iv) Scale the ablations past 8 and 5 clips. (v) Evaluate retrieval directly, with
-queries and relevance judgements over the delivered browser. (vi) Test shot-boundary clip
-segmentation against the fixed 30-second grid.
+requires. (iv) Scale the ablations past 8 and 5 clips. (v) Gate the ASR stage on Whisper's own
+language-identification output, so that a mis-identified clip is flagged rather than propagated
+into the transcript-derived keyword field. (vi) Test shot-boundary clip segmentation against the
+fixed 30-second grid. (vii) Add diarisation, which would let the transcript field carry speaker
+turns and would give the people-count field a second, audio-side source to be corroborated
+against.
 
 ---
 
@@ -703,5 +716,4 @@ features," *Information Sciences*, vol. 509, pp. 257–289, 2020.
 [17] M. Grootendorst, "KeyBERT: Minimal keyword extraction with BERT," 2020. [Online]. Available:
 https://github.com/MaartenGr/KeyBERT
 
-> **`[TO FILL: add 5–10 archival/cultural-heritage AV description references to Section II-A, and
-> a video-retrieval reference for the future-work claim in Section VI.]`**
+> **`[TO FILL: add 5–10 archival/cultural-heritage AV description references to Section II-A.]`**

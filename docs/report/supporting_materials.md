@@ -33,7 +33,7 @@ video indexing; foundation models as zero-shot annotators; consensus and weak su
 reliability and agreement estimation; and vision-language models for video description.
 
 Sources were identified through Google Scholar, IEEE Xplore, the ACM Digital Library and the ACL
-Anthology, using combinations of *archival video*, *audiovisual metadata*, *video retrieval*,
+Anthology, using combinations of *archival video*, *audiovisual metadata*, *archival description*,
 *zero-shot annotation*, *weak supervision*, *model consensus*, *inter-annotator agreement*,
 *vision-language model* and *hallucination*, supplemented by forward and backward citation tracing
 from the primary model papers. Priority was given to peer-reviewed work; model releases from 2024
@@ -447,8 +447,8 @@ five fields per clip from heterogeneous families; explicit per-field status and 
 experiments; a 7-model, 21,489-score benchmark; a read-only browser exposing the evidence.
 
 **Not delivered.** Any validity measurement (structurally impossible without a human reference);
-RQ2's agreement distribution **`[TO FILL]`**; adequately powered ablations; retrieval evaluation;
-the fine-tuning the notebook's rules cell describes.
+RQ2's agreement distribution **`[TO FILL]`**; adequately powered ablations; sub-clip temporal
+localisation; speaker attribution; the fine-tuning the notebook's rules cell describes.
 
 **Honest self-assessment.** The engineering is solid and the instrumentation is genuinely better
 than the norm for this kind of project. The scientific claim is correspondingly narrow, and that
