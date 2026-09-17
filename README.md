@@ -63,8 +63,9 @@ output/
 
 | Document | Path |
 |---|---|
-| Conference paper (IEEE, draft) | [`docs/paper/conference_paper.md`](docs/paper/conference_paper.md) |
-| Supporting-materials report (draft) | [`docs/report/supporting_materials.md`](docs/report/supporting_materials.md) |
+| Conference paper (IEEE) | [`docs/paper/conference_paper.md`](docs/paper/conference_paper.md) · [`.docx`](docs/paper/conference_paper.docx) |
+| Supporting-materials report | [`docs/report/supporting_materials.md`](docs/report/supporting_materials.md) · [`.docx`](docs/report/supporting_materials.docx) |
+| Rebuilding the .docx files | [`docs/build/README.md`](docs/build/README.md) |
 | Section plan and conventions | [`docs/WRITING_GUIDE.md`](docs/WRITING_GUIDE.md) |
 | Exemplars + IEEE template | [`docs/references/`](docs/references/README.md) |
 
