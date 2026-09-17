@@ -108,10 +108,11 @@ them.
   branch is evaluated.
 - **Closed visual vocabulary.** Visual tags are restricted to 34 labels chosen for this corpus.
   A concept outside that list cannot be expressed, by any model, by construction.
-- **No temporal localisation within a clip.** Every field is published at clip granularity. The
+- **No temporal localisation within a clip.** Every field is published at clip granularity: the
   record states that a caption, a speaker or an activity is present in a given 30 seconds, never
-  where inside it. On-screen text is probed densely across frames, but the persistence rule
-  collapses the result to one clip-level list and the frame offsets are discarded.
+  where inside it. The underlying timing is computed and retained in the prediction records —
+  Whisper segments carry start and end times, and each accepted on-screen-text string carries the
+  frame indices it was detected in — but the published five-field record does not expose it.
 - **No speaker attribution.** Whisper produces one undifferentiated transcript per clip. No
   diarisation, speaker counting or voice identification is attempted, so on the panel discussions
   and interviews that make up much of this corpus the record cannot say who said what.
@@ -654,9 +655,11 @@ benchmark, so the transcript column tests a model that was given the information
 requires. (iv) Scale the ablations past 8 and 5 clips. (v) Gate the ASR stage on Whisper's own
 language-identification output, so that a mis-identified clip is flagged rather than propagated
 into the transcript-derived keyword field. (vi) Test shot-boundary clip segmentation against the
-fixed 30-second grid. (vii) Add diarisation, which would let the transcript field carry speaker
-turns and would give the people-count field a second, audio-side source to be corroborated
-against.
+fixed 30-second grid. (vii) Surface the sub-clip timing the pipeline already records — Whisper
+segment boundaries and per-string OCR frame indices — in the published record, which needs an
+export change rather than new inference and would let a user land on the second rather than the
+half-minute. (viii) Add diarisation, which would let the transcript field carry speaker turns and
+would give people count a second, audio-side source to corroborate against its four visual ones.
 
 ---
 

@@ -447,8 +447,15 @@ five fields per clip from heterogeneous families; explicit per-field status and 
 experiments; a 7-model, 21,489-score benchmark; a read-only browser exposing the evidence.
 
 **Not delivered.** Any validity measurement (structurally impossible without a human reference);
-RQ2's agreement distribution **`[TO FILL]`**; adequately powered ablations; sub-clip temporal
-localisation; speaker attribution; the fine-tuning the notebook's rules cell describes.
+RQ2's agreement distribution **`[TO FILL]`**; adequately powered ablations; speaker attribution;
+the fine-tuning the notebook's rules cell describes.
+
+Sub-clip temporal localisation belongs on a separate line, because it is nearer than it looks.
+`transcribe_clip` stores every Whisper segment with `start` and `end` times, and the OCR consensus
+stores `frames_detected` for each accepted string. Both survive into the per-clip prediction
+records; only the focused five-field export drops them. Publishing them is a change to
+`build_automatic_ground_truth`, not new inference — the cheapest unclaimed capability in the
+project.
 
 **Honest self-assessment.** The engineering is solid and the instrumentation is genuinely better
 than the norm for this kind of project. The scientific claim is correspondingly narrow, and that
