@@ -18,40 +18,23 @@ Saurav Vijay · School of Electronics, Electrical Engineering and Computer Scien
 
 ## Abstract `[Abstract]`
 
-Community-television archives hold thousands of hours of long-form programming with no
-segment-level index, so nothing *inside* a programme is searchable. Automatic metadata
-generation is the obvious remedy, but the standard evaluation route — annotate a sample by
-hand, report accuracy — was unavailable for this corpus, and single-model pipelines publish
-confident output with no indication of which fields can be trusted. This work builds a
-reliability-aware metadata pipeline for the NVTV public archive that treats corroboration
-between independent model families as a first-class output alongside the metadata itself.
-Forty-seven archival programmes were segmented into 626 fixed 30-second clips and annotated
-across five fields (transcript, on-screen text, keywords, visual tags, people count) by
-heterogeneous pretrained families: Whisper-small and Whisper-turbo for speech; Tesseract and
-EasyOCR for on-screen text; KeyBERT, YAKE and TF-IDF for keywords; CLIP ViT-B/32 and ViT-L/14
-for a 34-label controlled vocabulary; and BLIP-VQA, ViLT-VQA and DETR for people count, with a
-hosted multimodal annotator as an optional additional family. Every published field carries an
-evidence status, the set of models supporting it, and a cross-source agreement score that
-explicitly excludes self-similarity and never promotes empty output. Four experiments probe the
-design: a frame-sampling ablation on a frozen calibration subset, a perturbation-based
-robustness study, an ablation isolating what the hosted annotator contributes, and a benchmark
-of seven open-weight vision-language models (Qwen3-VL 2B/4B/8B in Instruct and Thinking
-variants, InternVL3-2B and -8B) scored against the pipeline's consensus over 615 clips and
-21,140 (model, clip, field) scores. The results are mixed in an informative way. Scene-aware
-sampling recovered 23.0 OCR items per clip against 14.5 for the centre frame and 3.0 for fixed
-three-frame sampling, but its outputs agreed with the centre-frame baseline only 0.53 of the
-time, so added coverage and stability trade directly against each other. Robustness is strongly
-field-dependent: under Gaussian blur, visual-tag stability held at 0.96 while OCR stability
-collapsed to 0.07. The hosted annotator changed the published visual tags on 49.0% of clips
-despite agreeing with the local consensus only 0.42 of the time, and — by design — changed the
-published on-screen text on 0.0% of clips, because strict dual-engine OCR consensus is not
-overridable. In the VLM benchmark, InternVL3-2B led on on-screen text (0.566 ROUGE-L recall),
-visual tags (0.895 accuracy) and people count (0.404 accuracy), beating both 8B models; and
-every model scored at or near zero on transcript (best 0.034, worst 0.000), with
-Qwen3-VL-4B-Instruct returning an empty transcript on 613 of 615 clips. Scale did not predict
-quality on any field. The contribution is a reproducible, audit-ready silver-standard pipeline
-whose reliability signals are explicit, together with the negative and null results that
-delimit what such a pipeline can honestly claim.
+Community-television archives hold thousands of hours of programming with no segment-level
+index, so nothing inside a programme is searchable. Automatic description is the obvious remedy,
+but the standard evaluation route — annotate a sample by hand — was unavailable for this corpus,
+and single-model pipelines publish output with no indication of which fields can be trusted. This
+work builds a metadata pipeline for the NVTV public archive in which corroboration between
+independent model families is a published output alongside the metadata itself. Forty-seven
+archival programmes were segmented into 626 fixed 30-second clips and annotated across five fields
+by heterogeneous pretrained families, every field carrying an evidence status, its supporting
+models, and an agreement score that excludes self-similarity and never promotes empty output.
+Scene-aware sampling recovered 23.0 on-screen-text items per clip against 14.5 for the centre
+frame, yet agreed with that baseline only 0.53 of the time. Under blur, visual-tag stability held
+at 0.96 while text stability fell to 0.07. A hosted multimodal annotator rewrote 49.0% of
+visual-tag sets while agreeing with the local consensus 0.42 of the time, and changed 0.0% of
+on-screen text, which strict dual-engine consensus vetoes by design. Across seven open-weight
+vision-language models and 21,140 scores, a 2B model led three of five fields and every model
+scored at or near zero on transcript. Reliability is a per-field property, and corroboration is
+reported as corroboration, not correctness.
 
 **Keywords** `[Keywords]` — video archives; multimodal metadata; model consensus; vision-language
 models; silver standard; reliability estimation.
