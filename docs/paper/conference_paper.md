@@ -213,7 +213,8 @@ and parade footage, blue-plaque unveilings, political panel discussions, arts pr
 community-health features — a spread that exercises studio, street and event conditions.
 
 Each programme is segmented into fixed 30-second clips with FFmpeg, discarding any final fragment
-shorter than 2.0 s, producing **626 clips with zero failures**. Clip jobs run in a bounded thread
+shorter than 2.0 s, producing **626 clips totalling 5.09 h with zero failures**. Mean clip length
+is 29.25 s: 579 clips run the full 30 s and the 47 trailing fragments average 20.0 s. Clip jobs run in a bounded thread
 pool (2 workers × 1 FFmpeg thread on a 12-CPU runtime); each worker writes to a unique partial
 file, validates the resulting duration and atomically publishes it, so completed clips are reused
 on re-runs and task completion order cannot perturb the dataset. The manifest is sorted
@@ -237,12 +238,7 @@ TABLE I. `[tablehead]` CORPUS AND SEGMENTATION
 | Calibration / evaluation clips | 123 / 503 (19.6% / 80.4%) |
 | Clips scored in the VLM benchmark | 626 |
 | Clips per programme | 8 – 22 (mean 13.3, median 12, SD 3.1) |
-| Total clip duration | ≈ 5.2 h (upper bound) |
-
-> **`[TO FILL: exact corpus duration. 626 × 30 s = 5.22 h is an upper bound, because the final
-> fragment of each of the 47 programmes may be shorter than 30 s (a 2.0 s floor is retained), so
-> the true figure lies between 4.85 h and 5.22 h. Sum the ffprobe durations of the source files
-> for the exact value.]`**
+| Total clip duration | 5.09 h (18,312 s; mean clip 29.25 s) |
 
 ### B. Fields and Evidence Sources `[Heading2]`
 

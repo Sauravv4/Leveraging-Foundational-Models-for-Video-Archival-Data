@@ -578,6 +578,10 @@ author's own and have been verified. Both exemplars carry this section; QUB requ
 protest and parade footage, blue-plaque unveilings, political panels, arts and community-health
 programming, education and youth forums.
 
+The corpus totals **5.09 h** (18,312 s) across 626 clips, at a mean clip length of 29.25 s — 579
+clips run the full 30 s, and the 47 trailing fragments average 20.0 s, which accounts for the
+468 s shortfall against a nominal 626 × 30 s.
+
 Clips per programme range 8–22 (mean 13.3, median 12, SD 3.1), with most programmes at 11–13.
 The shortest are *REFRESH – PSNI Young Digital Team* (8) and *Adrian Ismay Vigil* (9); the longest
 are *Political Special* (22) and *Tourette Alliance First Annual Conference* (21). Because clips
