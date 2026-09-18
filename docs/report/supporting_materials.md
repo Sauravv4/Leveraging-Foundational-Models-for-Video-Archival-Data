@@ -906,8 +906,9 @@ to publish. To replace the derived column with the authoritative one, read the m
 
 From Section 12 of `02_vlm_benchmark_run.ipynb`, which prints the reference metadata beside every
 model's prediction. Five clips are reproduced here because each shows something the aggregate
-tables cannot. A sixth, which the placeholder at the end of this appendix specifies, is not
-recoverable from the committed artefacts.
+tables cannot; a sixth (E.6) comes from the hosted-annotator diagnostic in
+`01_metadata_pipeline.ipynb` instead, and is the only place in either document where the third
+annotator's effect on a single record is visible.
 
 **E.1 — `11_Poor_Mental_Health_on_Peace_Lines_150416…clip0003`: the OCR veto's false negatives.**
 
@@ -1023,28 +1024,40 @@ scoring vocabulary.
 Every model also read `REPUBLIC` from the backdrop against an empty reference — a third
 independent instance of the veto's behaviour, in a clip chosen for other reasons.
 
-**`[TO FILL: one further clip, showing a case where the hosted annotator changed the published
-visual tags (paper §IV-F). The five clips above come from the benchmark spot-check, which prints
-the published reference against the seven benchmark models and therefore cannot show it; the
-per-clip `gemini_ablation` diagnostic lives in `ground_truth_metadata.json`, which is not in the
-repository. RQ4 reports that the hosted annotator changed the published visual tags on 49.0% of
-clips, and no single instance of that change is shown anywhere in either document. One cell in
-`01_metadata_pipeline.ipynb` produces the example:]`**
+**E.6 — `10_Jacobin_Launch_230316…clip0001`: the hosted annotator declines the interview prior.**
 
-```python
-gt = json.loads(FOCUSED_GROUND_TRUTH_FILE.with_name(
-    "ground_truth_metadata.json").read_text())
-for clip in gt["clips"]:
-    ev = (clip.get("ground_truth_metadata") or {}).get("visual_tags") or {}
-    abl = ev.get("gemini_ablation") or {}
-    if abl.get("available") and abl.get("exact_output_changed"):
-        print(clip["clip_id"], clip.get("split"))
-        print("  published :", ev.get("value"))
-        print("  gemini    :", abl.get("gemini_candidate"))
-        print("  agreement :", abl.get("candidate_vs_local_agreement"),
-              "| stability:", abl.get("local_vs_augmented_stability"))
-        break
-```
+This is the clip the appendix most needed: one of the 49.0% where the hosted annotator changed the
+published visual-tag set. It is the adjacent clip to E.5, in the same book launch.
+
+| Source | Visual tags |
+|---|---|
+| Published (augmented consensus) | `audience`, `person speaking`, `interview`, `reporter` |
+| Hosted annotator (Gemini candidate) | `indoor scene`, `person speaking`, `audience` |
+
+The two sets share `person speaking` and `audience`, giving a Jaccard agreement of **0.400** on
+this clip against the corpus mean of 0.4194 — so this is a representative case, not an outlier
+chosen to make a point.
+
+**What it shows.** The hosted annotator, which is open-vocabulary and architecturally unrelated to
+either CLIP variant, does not propose `interview` and does not propose `reporter`. Both survive
+into the published record anyway. E.5 argued from the tag-frequency audit (§6.1) that those two
+labels fire far too readily across the corpus — `interview` on 85.8% of clips, `reporter` on 63.4%
+— and that they are wrong on this book launch. Here an independent third source agrees they are
+wrong, and the equal-weight scheme publishes them regardless, because two correlated CLIP variants
+outvote the one family that dissents. RQ4's refutation and §3.6's correlated-source limitation are
+the same defect seen from two directions, and this clip is the instance of it.
+
+The change is also not simply additive: Gemini's `indoor scene` did **not** enter the published set.
+So the third annotator's contribution here was to alter which of the local candidates survived,
+while its own strongest dissent — the absence of `interview` and `reporter` — had no effect at all.
+
+**What cannot be read from this.** The `gemini_ablation` diagnostic stores the Gemini candidate,
+the agreement and the stability, but **not the local-only tag set**. The published set above is the
+augmented output, so the record establishes *that* the output changed and *what the third source
+proposed*, but not which specific tag was added or dropped. This is the §3.6 limitation again — per
+source candidate lists are consumed inside the consensus functions and not retained — and it is the
+single change to `make_consensus_field` that would make RQ4 fully auditable rather than partly
+inferred.
 
 ### Appendix F — Reproduction
 
