@@ -19,3 +19,6 @@ env/
 # OS junk
 .DS_Store
 ._*
+node_modules/
+package.json
+package-lock.json

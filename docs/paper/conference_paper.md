@@ -103,7 +103,10 @@ them.
 - **No training of the metadata models.** Every model is used zero-shot at its published
   checkpoint. No fine-tuning contributes to any result reported in this paper.
 - **Fixed 30-second segmentation.** Clip boundaries are uniform and content-independent; shot
-  boundaries are used only to choose *frames within* a clip, never to choose clip boundaries.
+  boundaries are used only to choose *frames within* a clip, never to choose clip boundaries. A
+  post-hoc shot-detection pass over the corpus puts a number on the cost: 72.2% of published clips
+  span at least one shot cut and 22.8% span two or more, so the one-visual-context-per-clip
+  assumption behind per-clip consensus fails in roughly three-quarters of cases.
 - **English-language speech.** Whisper performs language identification but no non-English
   branch is evaluated.
 - **Closed visual vocabulary.** Visual tags are restricted to 34 labels chosen for this corpus.
@@ -740,8 +743,10 @@ benchmark, and a video-native one: the 4-frame budget forced here suits image-se
 whereas prompt-guided pooling over longer sequences [22], run through the video-text-to-text
 interface [24], is built for variable-length video. (iv) Scale the ablations past 8 and 5 clips. (v) Gate the ASR stage on Whisper's own
 language-identification output, so that a mis-identified clip is flagged rather than propagated
-into the transcript-derived keyword field. (vi) Test shot-boundary clip segmentation against the
-fixed 30-second grid. (vii) Surface the sub-clip timing the pipeline already records — Whisper
+into the transcript-derived keyword field. (vi) Re-annotate the shot-boundary
+partition and score it against fresh human labels; the partitions themselves have now been
+compared (§I-C), but without annotation on the scene grid the contamination figure cannot be
+turned into an accuracy result. (vii) Surface the sub-clip timing the pipeline already records — Whisper
 segment boundaries and per-string OCR frame indices — in the published record, which needs an
 export change rather than new inference and would let a user land on the second rather than the
 half-minute. (viii) Add diarisation, which would let the transcript field carry speaker turns and

@@ -386,6 +386,93 @@ correlated-source limitation from a caveat into a measurement.]`**
   reported scores come from the post-repair cache.]`** A results file with an undocumented repair
   history is the kind of thing an examiner asks about.
 
+### 3.8 Fixed-Grid Segmentation Diagnostic
+
+Both documents declare fixed 30-second segmentation a design boundary and list shot-aware
+segmentation as future work. This subsection replaces that assertion with a measurement.
+
+**Method.** `scripts/detect_scenes.py` runs PySceneDetect's `ContentDetector` [15] over the source
+programmes at `threshold = 27.0` and `min_scene_len = 10.0 s × fps`, writing one CSV row per
+detected scene (`video, scene, start_sec, end_sec, length_sec`). It is CPU-only and writes
+timestamps rather than clips, so no re-encoding occurs and the source media is untouched.
+`scripts/segmentation_diagnostic.py` then reconstructs the production 30-second grid over the same
+programmes and compares the two partitions. Both are deterministic and need no GPU.
+
+**Coverage.** 641 scenes were detected across **46 of the 47 programmes** — programme 32 was not
+processed and is absent from the CSV — totalling 5.00 h against the corpus's 5.09 h. Reconstructing
+the fixed grid over those same 46 programmes yields **622 clips** against the 626 actually
+published across 47; the four-clip difference is the unprocessed programme, which confirms the
+reconstruction reproduces the production segmentation exactly.
+
+**Segment-length distribution.**
+
+| | Fixed grid | Scene-aware |
+|---|---|---|
+| Segments (46 programmes) | 622 | 641 |
+| Mean length | 30.00 s (29.4 s incl. tails) | 28.06 s |
+| Median length | 30.00 s | 22.48 s |
+| Standard deviation | 0.00 s (excl. tails) | **20.58 s** |
+| Range | 30.00 s | 0.04 – 219.20 s |
+| Segments > 60 s | 0 | 41 |
+| Segments > 120 s | 0 | 4 |
+| Segments < 10 s | 0 | 14 |
+
+The 14 sub-10 s scenes are **all final-scene tail remainders** — the residue after the last
+detected cut in a programme — not violations of `min_scene_len`, which constrains only the interval
+between detected cuts. The fixed grid produces a comparable tail at the end of each programme.
+
+**Shot-cut contamination.** The detector places 595 internal cuts across the 46 programmes. Mapping
+those cuts onto the fixed grid:
+
+| Measure | Count | Share |
+|---|---|---|
+| Fixed clips containing **≥ 1** shot cut | 449 / 622 | **72.2 %** |
+| Fixed clips containing **≥ 2** shot cuts | 142 / 622 | 22.8 % |
+| Fixed clips containing 3 shot cuts | 4 / 622 | 0.6 % |
+| Fixed clips wholly inside one shot | 173 / 622 | 27.8 % |
+| Scenes split across **≥ 1** fixed boundary | 458 / 641 | **71.5 %** |
+
+**Why this matters for the reported agreement.** Per-clip consensus over `visual_tags`,
+`on_screen_text` and `people_count` implicitly assumes one visual context per clip. In 72.2 % of
+clips that assumption does not hold. Two consequences follow mechanically. First, on visual tags,
+CLIP ViT-B/32 and ViT-L/14 sampling different frames of a two-shot clip can each be correct about a
+different shot and still be recorded as disagreeing — model disagreement and segmentation
+contamination are indistinguishable in the stored artefacts. Second, on on-screen text, the
+temporal-persistence veto requires a string to survive at least two frames at confidence ≥ 0.82; a
+caption present through only one of two shots in a clip fails that test and is discarded as
+transient, which is consistent with the field's 0.000 high-agreement rate and 53.4 % conflict rate.
+Segmentation contamination is therefore a live alternative explanation for part of the 0.509 and
+0.156 figures, and the current design cannot separate it from model error.
+
+**What this does not establish.** This is a property of the partition, not an accuracy result. No
+human annotation exists on the scene grid — the 38-clip calibration set is indexed to fixed clips —
+so no like-for-like accuracy comparison between the two segmentations is available. The correct
+conclusion is that the fixed grid violates its own one-shot-per-clip assumption in roughly
+three-quarters of cases, **not** that scene-aware segmentation would raise agreement. Establishing
+the latter requires re-annotating the scene partition and re-scoring against fresh human labels,
+which is the form the future-work item should take.
+
+**Hosted-annotator feasibility run on the scene partition.** A single-model Gemini pass over the
+detected scenes was run as a feasibility check, not as an experiment. It annotated **577 of the 641
+scenes (90.0 %) across 42 of the 47 programmes**, covering 4.61 h and sampling 16,709 frames at
+1 fps (mean 29 per scene, max 220). Nine scenes failed: eight `429 RESOURCE_EXHAUSTED` on one
+programme and one `503 UNAVAILABLE`. Field coverage over the 577 annotated scenes:
+
+| Field | Non-empty | Share |
+|---|---|---|
+| `people_count_numeric`, `description`, `activity`, `shot_type`, `content_type` | 577 | 100.0 % |
+| `visual_tags` | 574 | 99.5 % |
+| `on_screen_text` | 418 | 72.4 % |
+| `geographical_location` | 225 | 39.0 % |
+| `uncertainty_notes` | 176 | 30.5 % |
+
+The run is reported here for completeness and is **excluded from every headline result**, for three
+reasons. It confounds three variables at once — segmentation, annotator and schema (nine fields
+against the pipeline's five) — so it is not a segmentation ablation. It carries 10 % missing data
+with two distinct failure modes. And its `people_count_numeric` uses `-1` as an abstention sentinel
+for uncountable crowds in 173 of 577 scenes (30.0 %), which is not commensurable with the
+pipeline's numeric people-count field and cannot be folded into the 0.812 agreement figure.
+
 ---
 
 ## 4. Tooling and Environment
@@ -490,7 +577,9 @@ families are correlated, the neutral default lets a third family rewrite half th
 **Why fixed 30-second clips.** Uniform, content-independent boundaries make clip identity stable
 across pipeline versions. Shot-boundary segmentation would produce clips better aligned to content
 but would make every clip ID version-dependent, breaking cached predictions on every change to the
-detector.
+detector. The measured cost of that trade is in §3.8: 72.2 % of published clips span at least one
+shot cut, so the stability was bought at the price of a one-shot-per-clip assumption that mostly
+does not hold.
 
 ### 5.3 Lessons Learned
 
@@ -768,10 +857,18 @@ and the aggregate numbers cannot settle it.]`**
 notebooks/01_metadata_pipeline.ipynb          # clips, metadata, experiments, browser
 notebooks/02_vlm_benchmark_run.ipynb          # seven VLMs, checkpointed, resumable
 notebooks/03_vlm_benchmark_comparison.ipynb   # scoring and tables only, no GPU needed
+scripts/detect_scenes.py                      # shot boundaries -> _all_scenes.csv (CPU only)
+scripts/segmentation_diagnostic.py            # Section 3.8 tables from that CSV (CPU only)
 ```
 
 Run 01 top to bottom on a GPU runtime with the Drive layout in its header cell; run 02 on a GPU
-node; run 03 anywhere. All three are resumable and skip completed work.
+node; run 03 anywhere. All three are resumable and skip completed work. The two scripts are
+independent of the notebooks and reproduce §3.8 from the source programmes alone:
+
+```
+python scripts/detect_scenes.py /path/to/VIDEO_FILES _all_scenes.csv
+python scripts/segmentation_diagnostic.py _all_scenes.csv
+```
 
 ---
 
