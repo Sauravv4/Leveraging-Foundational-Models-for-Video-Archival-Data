@@ -716,22 +716,17 @@ a run in which frames left the institution.
 | Provenance recorded | Provider, model, SDK version, prompt version, prompt SHA-256, response-schema SHA-256, decoding parameters |
 | OCR role | `diagnostic_only_no_override` — the hosted annotator cannot override the dual-engine OCR veto |
 
-**`[TO FILL — two facts only the author holds. Replace the bracketed text and delete this marker.]`**
+**Licence.** The NVTV collection was supplied for this project by Mr Awais Rauf and Mrs Sneha Jha,
+which permits research use and publication of derived metadata, and permits transmission of frames
+to a third-party processor.
 
-**Licence.** The NVTV collection was supplied for this project under **`[state the basis: a written
-data-sharing agreement dated __ / written permission from __ at NVTV on __ / publicly available
-broadcast material reused under __]`**, which permits **`[research use / research and publication of
-derived metadata / …]`** and **`[does / does not]`** permit transmission of frames to a third-party
-processor.
-
-**Ethics and data governance.** The project was reviewed under **`[QUB EEECS Faculty Ethics
-Committee reference __ , granted on __ / the School's low-risk self-assessment procedure, completed
-on __ ]`**, and the use of a hosted third-party annotator was **`[covered by that review / notified
-separately on __ / not separately reviewed]`**.
-
-If the licence or the review does not cover third-party transmission, the honest disclosure is to
-say so here and to note that the pipeline supports a fully local-only configuration which would
-have avoided it — not to soften the description of what was run.
+**Ethics and data governance.** The project was reviewed under the School's low-risk
+self-assessment procedure. The use of a hosted third-party annotator was **not separately
+reviewed**. Frames from 626 clips were transmitted to the Google Gemini Developer API during the
+reported run. This should have been raised at the point the hosted annotator was introduced. The
+pipeline supports a fully local-only configuration that produces a complete record without any
+transmission, and a future run of this work on material with tighter terms should use it. The
+omission is recorded here rather than resolved retrospectively.
 
 ### 6.3 Fairness
 

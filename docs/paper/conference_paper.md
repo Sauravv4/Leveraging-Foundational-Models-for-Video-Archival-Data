@@ -801,11 +801,7 @@ Section IV-D reports honestly that it is informative on three fields and saturat
 limitation of the triage mechanism and is stated rather than presented as coverage. No claim in
 this paper requires a reader to trust an unverified automatic judgement.
 
-**`[TO FILL: the NVTV licence basis and the QUB ethics/data-governance reference. The reported run
-did use the hosted annotator — its candidate coverage on visual tags is 1.0000 across all 626 clips
-and it changes 49.0% of published tag sets (Section IV-F) — so state the approval under which
-frames were transmitted, or state that it was not separately reviewed. The supporting materials
-carry the full disclosure.]`**
+**Licence and approval.** The NVTV collection was supplied for this project by the supervisory team, permitting research use and publication of derived metadata. The project was reviewed under the School's low-risk self-assessment procedure; the use of a hosted third-party annotator was not separately reviewed, and frames from all 626 clips were transmitted to the hosted API during the reported run. The pipeline supports a fully local-only configuration that would have avoided this, and the omission is recorded rather than resolved retrospectively.
 
 ---
 
