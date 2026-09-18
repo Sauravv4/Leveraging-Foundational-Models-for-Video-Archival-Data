@@ -331,7 +331,7 @@ one most likely to break silently under a future change to the sampling policy.
 The strict dual-engine rule was verified empirically, not just by inspection: the hosted annotator
 proposed on-screen text on 38.5% of clips (626 clips) and the **exact output-change rate was
 0.0000**. The veto holds across the whole corpus. This is reported as a result in the paper
-(Table V) because it is one — a specified safety property, tested at corpus scale and confirmed.
+(Table VII) because it is one — a specified safety property, tested at corpus scale and confirmed.
 
 ### 3.6 Source-Independence Audit
 
@@ -488,34 +488,62 @@ pipeline's numeric people-count field and cannot be folded into the 0.812 agreem
 | PyTorch | 2.11.0+cu128 | 2.7.1+cu118 |
 | Persistence | Google Drive | `~/sharedscratch` |
 
-### 4.2 Pinned Packages
+### 4.2 Pinned Packages and What Each Is For
 
-`transformers==4.50.3`, `openai-whisper==20250625`, `sentence-transformers==3.4.1`,
-`keybert==0.9.0`, `jiwer==4.0.0`, `pytesseract==0.3.13`, `easyocr==1.7.2`, `yake==0.6.0`,
-`scenedetect==0.7.1`, `jsonschema==4.26.0`, `flask==3.1.3`, `pydantic==2.12.5`,
-`google-genai==2.17.0`, `seaborn==0.13.2`, `rouge-score==0.1.2`. System: FFmpeg, Tesseract via
-`apt`.
+Every version is pinned; the run that produced the reported results used exactly these.
 
-### 4.3 Models
+| Package | Version | Role in this project | Why this one |
+|---|---|---|---|
+| `transformers` | 4.50.3 | Loads CLIP, BLIP, ViLT and DETR in the pipeline, and all seven benchmark VLMs | One interface across every checkpoint; the `image-text-to-text` API [23] made the seven-model benchmark a configuration change rather than seven integrations |
+| `openai-whisper` | 20250625 | ASR for the transcript field, both `small` and `turbo` | Reference implementation; exposes segment timings and language identification, both of which the pipeline records |
+| `pytesseract` / `easyocr` | 0.3.13 / 1.7.2 | The two OCR engines behind the dual-engine veto | Deliberately unrelated: Tesseract is a classical LSTM line recogniser, EasyOCR a detection-plus-recognition neural stack. Independence is the point — a shared engine would make the veto meaningless |
+| `keybert` / `yake` | 0.9.0 / 0.6.0 | Two of the three keyword extractors | One embedding-based and one statistical, chosen for mechanism diversity; §3.6 shows the third (TF-IDF, from `scikit-learn`) agrees far more with YAKE than with KeyBERT, which is the diversity assumption being tested |
+| `sentence-transformers` | 3.4.1 | `all-MiniLM-L6-v2` [18] embeddings for KeyBERT and for semantic set comparison | Small enough to run per clip on CPU alongside GPU work |
+| `scenedetect` | 0.7.1 | Scene-aware frame sampling inside a clip, and the §3.8 shot-boundary diagnostic | CPU-only and roughly 30× realtime, so it does not compete with the GPU stages |
+| `jiwer` / `rouge-score` | 4.0.0 / 0.1.2 | Word error rate and ROUGE-L recall for free-text scoring | Standard implementations; using the published ones rather than hand-rolled scorers keeps the numbers comparable to other work |
+| `pydantic` / `jsonschema` | 2.12.5 / 4.26.0 | Constrains the hosted annotator's response and validates every exported artefact | A schema-constrained response is what makes the hosted output parseable at all; validation at export is what makes a malformed record fail loudly |
+| `google-genai` | 2.17.0 | Hosted-annotator client | Official SDK; its version is recorded in the provenance block so the run is identifiable |
+| `flask` | 3.1.3 | The local review dashboard | A reviewer needs to see the clip beside its record; a notebook table cannot play video |
+| `seaborn` / `matplotlib` | 0.13.2 | Result charts in the notebooks and the paper's figures | — |
+| FFmpeg, Tesseract (`apt`) | system | Clip cutting and frame extraction; OCR backend | FFmpeg is used with stream copy where possible, which is why 626 clips cut in minutes without re-encoding |
 
-| Role | Model | Notes |
+### 4.3 Models and Why Each Was Chosen
+
+Selection was driven by one criterion above accuracy: **mechanism diversity**, because the
+agreement scheme measures corroboration between sources and corroboration between two similar
+sources is worth less than corroboration between two unrelated ones (§3.6, and RQ4 in the paper).
+
+| Role | Model | Why this model |
 |---|---|---|
-| ASR (primary) | `whisper-small` [6] | Also performs language ID |
-| ASR (verifier) | `whisper-turbo` [6] | Deterministic output published |
-| OCR | Tesseract [17]; EasyOCR [39] | Both required for publication |
-| Visual tags (primary) | `openai/clip-vit-base-patch32` [5] | 34-label vocabulary |
-| Visual tags (verifier) | `openai/clip-vit-large-patch14` [5] | Prompt: "a photograph of {label}" |
-| People count | `blip-vqa-base` [7]; `vilt-b32-finetuned-vqa` [8]; `detr-resnet-50` [9] | Three families |
-| Keywords | KeyBERT [20] (`all-MiniLM-L6-v2` [18]); YAKE [19]; TF-IDF | Top *k* = 5 |
-| Hosted annotator | `gemini-3.6-flash` | Optional; ≤ 5 frames; one family vote |
-| Benchmark | Qwen3-VL [12] 2B/4B/8B (Instruct, Thinking); InternVL3 [13] -2B/-8B | 8B models int4, loaded through the Transformers image-text-to-text interface [23] |
+| ASR (primary) | `whisper-small` [6] | The largest Whisper that leaves GPU headroom for the visual stages to run in the same Colab session; also performs language ID |
+| ASR (verifier) | `whisper-turbo` [6] | A different decoder configuration over the same architecture — the weakest independence pair in the system, and disclosed as such |
+| OCR | Tesseract [17]; EasyOCR [39] | Two unrelated recognition mechanisms; both must agree at ≥ 0.80 before a string is published |
+| Visual tags (primary) | `clip-vit-base-patch32` [5] | Fast enough to run on every clip; the 34-label vocabulary is scored as a zero-shot ranking |
+| Visual tags (verifier) | `clip-vit-large-patch14` [5] | A capacity difference rather than a mechanism difference, which RQ2 shows inflates the tag field's agreement |
+| People count | `blip-vqa-base` [7]; `vilt-b32-finetuned-vqa` [8]; `detr-resnet-50` [9] | Three genuinely unrelated routes to one integer: a captioning VQA model, a transformer VQA model and a convolutional set-prediction detector. This is the most independent evidence set in the system and it produces the highest agreement (0.812), which is the design's central claim in miniature |
+| Keywords | KeyBERT [20]; YAKE [19]; TF-IDF | Three ranking functions — but over one Whisper transcript, which §3.6 identifies as a design fault rather than a result |
+| Hosted annotator | `gemini-3.6-flash` | An architecturally unrelated, open-vocabulary fourth opinion; the fast tier because the run is 626 clips and the role is corroboration, not adjudication |
+| Benchmark | Qwen3-VL [12] 2B/4B/8B (Instruct, Thinking); InternVL3 [13] -2B/-8B | Two families × three scales × two post-training styles, so scale and deliberation can be separated. Both 8B models ran int4 on the 20 GB MIG slice, which confounds the scale comparison and is disclosed at every mention |
 
-Scene detection uses PySceneDetect [15]; the benchmark's free-text fields are scored with
-ROUGE-L recall [16]. A video-native model such as PPLLaVA [22], run through the video-text-to-text
-interface [24], would remove the fixed frame budget discussed in §4.4, and metadata-aware
-retrieval work [21] motivates publishing per-field structure rather than a flat caption.
+A video-native model such as PPLLaVA [22], run through the video-text-to-text interface [24],
+would remove the fixed frame budget discussed in §4.5, and metadata-aware retrieval work [21]
+motivates publishing per-field structure rather than a flat caption.
 
-### 4.4 Tool-Driven Constraints
+### 4.4 Tools by Project Stage
+
+| Stage | Tools |
+|---|---|
+| Acquisition and segmentation | FFmpeg (stream-copy cutting), FFprobe (duration validation), Python `hashlib` (source SHA-256) |
+| Frame sampling | PySceneDetect, Pillow |
+| Metadata generation | Whisper, Tesseract, EasyOCR, CLIP ×2, BLIP-VQA, ViLT-VQA, DETR, KeyBERT, YAKE, scikit-learn TF-IDF, Gemini |
+| Consensus and export | NumPy, pandas, `difflib`, sentence-transformers, `jsonschema` |
+| Review | Flask dashboard serving clips beside their records |
+| Benchmark | Transformers, `bitsandbytes` (int4), Kelvin2 Slurm |
+| Scoring and reporting | `jiwer`, `rouge-score`, pandas, seaborn, matplotlib |
+| Verification | `scripts/fill_report_gaps.py`, `scripts/segmentation_diagnostic.py` |
+| Environment and provenance | Colab, Kelvin2, Google Drive, Git, pinned requirements, recorded model revisions |
+
+### 4.5 Tool-Driven Constraints
 
 Four reported design choices are hardware artefacts, not scientific ones, and are labelled as such
 wherever they appear:
@@ -915,15 +943,15 @@ to publish. To replace the derived column with the authoritative one, read the m
 
 ### Appendix D — Full Result Tables
 
-- **D.1** Frame-sampling ablation — paper Table III (*n* = 8). Note when citing the OCR column
+- **D.1** Frame-sampling ablation — paper Table IV (*n* = 8). Note when citing the OCR column
   that `aggregate_temporal_ocr` derives its persistence threshold from the frame count
   (`required_frames = 1 if len(frame_outputs) == 1 else min(ocr_min_frame_occurrences, n)`), so
   the centre-frame count is unfiltered and the other two are filtered at two occurrences. Only
   the fixed-three and scene-aware figures are directly comparable.
-- **D.2** Perturbation robustness — paper Table IV (*n* = 5).
-- **D.3** Hosted-annotator ablation — paper Table V (*n* = 626).
-- **D.4** VLM benchmark — paper Table VI (*n* = 626, 21,489 scores).
-- **D.5** Per-field agreement distribution — paper Table IV (*n* = 626, all five fields).
+- **D.2** Perturbation robustness — paper Table VI (*n* = 5).
+- **D.3** Hosted-annotator ablation — paper Table VII (*n* = 626).
+- **D.4** VLM benchmark — paper Table VIII (*n* = 626, 21,489 scores).
+- **D.5** Per-field agreement distribution — paper Table V (*n* = 626, all five fields).
 - **D.6** Benchmark coverage — 626/626 on free-text and tag fields for five models; 625 (Qwen3-VL-2B-Instruct) and 624 (-2B-Thinking); people count 566–568/626.
 - **D.7** Transcript field — exactly 0.000 for InternVL3-2B, Qwen3-VL-4B-Instruct and
   Qwen3-VL-8B-Instruct; 0.013–0.034 for the rest.
@@ -1117,7 +1145,7 @@ python scripts/segmentation_diagnostic.py _all_scenes.csv
 
 ## References
 
-Entries [1]–[24] share their numbering with the research paper; [25]–[40] are cited only here.
+Entries [1]–[26] share their numbering with the research paper; [27]–[40] are cited only here.
 
 [1] A. F. Smeaton, P. Over, and W. Kraaij, "Evaluation campaigns and TRECVid," in *Proc. 8th ACM Int. Workshop on Multimedia Information Retrieval (MIR)*, 2006, pp. 321–330.
 

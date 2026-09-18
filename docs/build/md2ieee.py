@@ -156,6 +156,7 @@ out.append(f'<w:p><w:pPr>{SECT_1COL}</w:pPr></w:p>')
 i = 0
 in_refs = False
 pending_tablehead = None
+pending_full = False
 while i < len(lines):
     line = lines[i].rstrip()
     stripped = line.strip()
@@ -202,7 +203,7 @@ while i < len(lines):
             if not all(re.fullmatch(r':?-{2,}:?', c) for c in cells):
                 rows.append(cells)
             i += 1
-        full = len(rows[0]) >= 5
+        full = len(rows[0]) >= 5 or pending_full
         if full:
             out.append(f'<w:p><w:pPr>{SECT_2COL}</w:pPr></w:p>')
             if pending_tablehead:
@@ -214,6 +215,7 @@ while i < len(lines):
                 out.append(pending_tablehead)
             out.append(table(rows, False))
         pending_tablehead = None
+        pending_full = False
         continue
 
     # headings
@@ -251,7 +253,11 @@ while i < len(lines):
     # TABLE N. caption
     m = re.match(r'^TABLE\s+[IVX0-9]+\.\s*`\[tablehead\]`\s*(.*)$', stripped)
     if m:
-        pending_tablehead = para('tablehead', m.group(1).title())
+        title = m.group(1)
+        force_full = title.endswith('{full}')
+        title = title.removesuffix('{full}').strip()
+        pending_tablehead = para('tablehead', title.title())
+        pending_full = force_full
         i += 1
         continue
 

@@ -317,7 +317,51 @@ completion of unreadable text; requests are sequential, rate-limited, retried wi
 exponential backoff, cached and provenance-tracked, and the API key is never written to an
 artefact. Its role is deliberately bounded: an additional voter, never an authority.
 
-### G. Reproducibility Controls `[Heading2]`
+### G. Configuration, Parameter Selection and the Absence of Training `[Heading2]`
+
+**No model in this system is trained, fine-tuned or adapted.** Every checkpoint is used zero-shot
+at its published revision, so there is no training procedure, no loss, no optimiser and no learning
+curve to report. This is a design decision rather than an omission, and it follows from the problem:
+an archive with no annotated reference cannot supervise training, and a system whose value is a
+*reliability estimate* must not be tuned against labels it does not have. The zero-shot constraint
+is what makes the agreement machinery necessary in the first place.
+
+What replaces training is a **configuration surface** — the thresholds and policies that govern
+segmentation, sampling, the OCR veto, consensus and reporting. These are this system's
+hyperparameters, and they are selected, disclosed and held fixed under the same discipline a tuned
+model would demand.
+
+TABLE III. `[tablehead]` CONFIGURATION SURFACE AND SELECTION BASIS {full}
+
+| Parameter | Value | Selection basis |
+|---|---|---|
+| `frame_sampling_policy` | `scene_aware` | RQ1 ablation on the calibration subset (Section IV-C); chosen for coverage over stability, with the trade quantified |
+| `max_scene_frames` | 5 | Ablation; beyond 5 the marginal yield on the 8-clip subset was flat against linear cost |
+| `scene_adaptive_threshold` / `scene_min_length` | 3.0 / 0.6 s | PySceneDetect defaults for broadcast content, retained unchanged and disclosed as untuned |
+| `tesseract_min_word_confidence` | 60.0 | Tesseract's own documented mid-confidence cut; raised from the library default to bias toward precision |
+| `easyocr_min_confidence` | 0.50 | Set so that neither engine alone can publish a string |
+| `ocr_temporal_similarity` / `ocr_min_frame_occurrences` | 0.82 / 2 | Persistence rule: a string must survive two frames, which is what rejects single-frame flicker |
+| `ocr_cross_engine_similarity` | 0.80 | The dual-engine veto (Section III-D); its empirical effect is measured in Section IV-F, where the hosted annotator overrides it on zero clips |
+| `tag_top_k` | 5 | Fixed across the pipeline *and* the benchmark so the two are comparable |
+| Agreement tiers | 0.75 / 0.50 | Reporting thresholds, not decision thresholds; no published value changes if they move |
+| `calibration_fraction` | 0.20 | Standard held-out proportion; assigned at source level (Section III-A) |
+| Benchmark frames / decoding | 4 / greedy | Hardware-bound, not chosen: 6 frames exhausted the 20 GB MIG slice. Disclosed as a constraint wherever the benchmark is discussed |
+| Benchmark `max_new_tokens` | 700 / 1400 | Thinking variants need budget for a reasoning trace; the asymmetry is disclosed in Section IV-G |
+
+**Where the parameters were selected.** The 123-clip calibration split exists for exactly this
+purpose. All ablation and robustness work — RQ1 (*n* = 8) and RQ3 (*n* = 5) — draws only on
+calibration sources, and the 503-clip evaluation split is untouched by any selection decision. The
+split is assigned at *source* level, so no programme contributes clips to both, and it is
+deterministic: `assign_source_splits` seeds a generator at 42 and permutes a sorted identifier
+list, making the partition independent of file-discovery order.
+
+**What this costs, stated plainly.** Two of the twelve parameters above rest on library defaults
+rather than measurement, and the benchmark's frame budget is a hardware artefact. A sweep over the
+OCR thresholds is the single most valuable missing experiment in this project, because Section IV-D
+shows that veto placing 53.4% of clips into `conflict`, and no result here establishes that 0.80 is
+the right place for it. Section V-C treats this as a limitation rather than settled.
+
+### H. Reproducibility Controls `[Heading2]`
 
 Seeds are fixed; model revisions are resolved and recorded as commit hashes; the manifest ordering
 is deterministic; per-clip checkpointing makes every stage resumable; failures are recorded
@@ -325,24 +369,6 @@ against their clip identifier rather than suppressed; and all artefacts are writ
 a partial-file-and-rename discipline so an interrupted run cannot leave a truncated JSON. GPU
 inference on shared models is serialised while CPU OCR runs bounded-parallel, preventing CUDA
 contention and non-thread-safe model use.
-
-### H. Ethical Considerations `[Heading2]`
-
-The footage shows identifiable members of the public in public settings, recorded for broadcast.
-Four controls follow from this. The published record contains no identity inference: the pipeline
-does not attempt to name individuals, and the hosted annotator is explicitly instructed not to.
-People count is published as an integer, never as demographic attributes. Sending frames to a
-hosted API is a disclosure of archive content to a third party and is gated on the licence and on
-institutional data-governance approval, with local-only operation fully supported. And the
-34-label vocabulary was authored by one person for one corpus: it encodes a particular view of
-what is worth recording about a community, which is a limitation of the catalogue it produces, not
-a neutral technical detail.
-
-> **`[TO FILL: NVTV licence terms and the QUB ethics/data-governance reference under which the
-> hosted-API calls were made. State the approval explicitly or state that only local models were
-> used for the final reported run.]`**
-
----
 
 ## IV. EXPERIMENTATION AND RESULTS `[Heading1]`
 
@@ -385,7 +411,7 @@ Three policies were compared on the frozen 8-clip calibration subset. The experi
 coverage, change from the centre-frame baseline and cross-frame stability; it does not measure
 accuracy.
 
-TABLE III. `[tablehead]` FRAME-SAMPLING ABLATION (CALIBRATION SUBSET, *n* = 8)
+TABLE IV. `[tablehead]` FRAME-SAMPLING ABLATION (CALIBRATION SUBSET, *n* = 8)
 
 | Policy | Mean frames | OCR items / clip | OCR set-F1 vs centre | Tag set-F1 vs centre | People-count stability | Mean stability |
 |---|---|---|---|---|---|---|
@@ -425,7 +451,7 @@ sized to permit policy selection without inspecting evaluation material, which i
 
 Every published field of all 626 clips was scored. Fields are ordered by mean agreement.
 
-TABLE IV. `[tablehead]` EVIDENCE STATUS AND AGREEMENT BY FIELD (*n* = 626)
+TABLE V. `[tablehead]` EVIDENCE STATUS AND AGREEMENT BY FIELD (*n* = 626)
 
 | Field | Families | Observed | Conflict | Not detected | High ≥ 0.75 | Moderate ≥ 0.50 | Low < 0.50 | Not scored | Mean agreement | Needs caution |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -479,7 +505,7 @@ nothing. Triage works only where corroboration is real.
 Five calibration clips were degraded and the visual verifier re-run against its original
 centre-frame evidence.
 
-TABLE V. `[tablehead]` STABILITY UNDER VISUAL DEGRADATION (*n* = 5)
+TABLE VI. `[tablehead]` STABILITY UNDER VISUAL DEGRADATION (*n* = 5)
 
 | Perturbation | OCR stability | Tag stability | People-count stability | Mean |
 |---|---|---|---|---|
@@ -509,7 +535,7 @@ present but unreadable", and this experiment quantifies how often that distincti
 Two distinct quantities are separated here: how often the hosted annotator *agrees with* the
 local-only consensus, and how often adding it *changes* the published output. Neither is accuracy.
 
-TABLE VI. `[tablehead]` HOSTED-ANNOTATOR ABLATION (*n* = 626)
+TABLE VII. `[tablehead]` HOSTED-ANNOTATOR ABLATION (*n* = 626)
 
 | Field | Candidate coverage | Exact output-change rate | Mean candidate vs local agreement | Local vs augmented stability |
 |---|---|---|---|---|
@@ -543,7 +569,7 @@ producing **21,489 (model, clip, field) scores**. Thinking variants received a l
 (1400 vs 700) to accommodate their reasoning trace, and both 8B models ran int4-quantised. All
 seven were loaded through the Transformers image-text-to-text interface [23].
 
-TABLE VII. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 626)
+TABLE VIII. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 626)
 
 | Model | On-screen text (R-L) | Keywords (R-L) | Visual tags (acc.) | People count (acc.) | Transcript (R-L) |
 |---|---|---|---|---|---|
@@ -604,17 +630,17 @@ The text was present; the strict dual-engine rule of III-D rejected it. On a sec
 reference held the fragment `TIVAL` while the models returned the full theatre poster — title,
 author, director, dates, box-office number. In both cases ROUGE-L recall scores the models
 *against* a reference that is less complete than they are. The veto buys precision on this field,
-Table VI confirms it is never overridden, and these examples put a visible price on it. Absent a
+Table VII confirms it is never overridden, and these examples put a visible price on it. Absent a
 human reference the trade cannot be quantified, only demonstrated — which is itself an argument
 for collecting one.
 
 ### H. Anticipated versus Actual Results `[Heading2]`
 
-TABLE VIII. `[tablehead]` ANTICIPATED VERSUS ACTUAL
+TABLE IX. `[tablehead]` ANTICIPATED VERSUS ACTUAL
 
 | # | Anticipated | Actual | Verdict |
 |---|---|---|---|
-| RQ1 | More frames raise coverage and stability together | Coverage up (23.0 vs 14.5 items), stability **down** (0.5318 vs 1.0) | Partly refuted |
+| RQ1 | More frames raise coverage and stability together | Coverage up (23.0 vs 3.0 items, both filtered), stability **down** (0.5318 vs 0.5469) | Refuted |
 | RQ1 | Fixed three-frame sits between centre and scene-aware | Fixed three-frame is **worst** on OCR coverage (3.0) | Refuted |
 | RQ2 | Agreement will be highest where the task is easiest | Highest where the sources are most independent | Refuted |
 | RQ2 | Three keyword extractors give three-way corroboration | 0.173 mean, 99.0% low — one input, three views | Refuted |
@@ -626,9 +652,9 @@ TABLE VIII. `[tablehead]` ANTICIPATED VERSUS ACTUAL
 | RQ5 | Thinking variants beat Instruct | Split by field; ahead only on people count | Partly refuted |
 | RQ5 | Vision-only transcript will be near zero | 0.034 to 0.000; three models exactly 0.000 | Confirmed |
 
-Six of eight anticipated outcomes were refuted or partly refuted. The two confirmed are the two
-that follow deductively from the design (the OCR veto) or from the modality (transcript). Every
-empirical expectation about scale, deliberation and frame budget was wrong.
+Eight of the eleven anticipated outcomes were refuted or partly refuted. The three confirmed are
+the ones that follow deductively from the design (the OCR veto, twice) or from the modality
+(transcript). Every empirical expectation about scale, deliberation and frame budget was wrong.
 
 ---
 
@@ -725,7 +751,64 @@ place.
 
 ---
 
-## VI. CONCLUSION AND FUTURE WORK `[Heading1]`
+## VI. ETHICAL CONSIDERATIONS `[Heading1]`
+
+The corpus is community-television footage of identifiable members of the public, recorded in
+public settings for broadcast. Five concerns follow, and each is answered by a control in the
+system rather than by a statement of intent.
+
+**Bias.** The 34-label visual vocabulary was authored by one person for one corpus, and a concept
+outside it cannot be expressed by any model in the system. Measured across the 626 clips the
+vocabulary is badly balanced: `person speaking` fires on 94.9% of clips, `interview` on 85.8% and
+`reporter` on 63.4%, so those labels carry almost no discriminative information, while `landscape`
+and `rural countryside` never fire at all — plausible labels for Northern Ireland, absent from this
+urban civic-events corpus. The vocabulary encodes a particular view of what is worth recording
+about a community, which is a property of the catalogue it produces and not a neutral technical
+detail. The underlying models carry their own web-scale training biases, which this work does not
+measure.
+
+**Privacy.** No stage of the pipeline performs identity inference: individuals are never named,
+and the hosted annotator is explicitly instructed not to identify people or to infer location,
+intent or events that are not visibly supported. People count is published as a bare integer and
+never as a demographic attribute. Frames sent to the hosted annotator constitute disclosure of
+archive content to a third party; up to five JPEG frames per clip are transmitted, no audio,
+transcript or source file is, and API keys are read from the environment and never written to an
+artefact. Fully local-only operation is supported and produces a complete record.
+
+**Fairness.** The pipeline's speech stage is the fairness-critical component, because automatic
+speech recognition is documented to degrade on regional and minority-accented English [25], and
+this corpus is entirely Northern Irish accented speech. The evidence is visible in the published
+data: on one clip the transcript stage produced Welsh-looking token sequences from accented English
+and all three keyword extractors carried them into the published keyword field, because they share
+that single input and nothing in the system could dissent. Whisper is also known to hallucinate
+fluent text on difficult audio [26]. The agreement design cannot detect either failure, since
+corroboration between two Whisper checkpoints measures consistency and not correctness — which is
+the same correlated-source limitation that Section V-C identifies, arriving here as a fairness
+problem rather than a statistical one.
+
+**Transparency.** Every published field carries its evidence status, its contributing families,
+its agreement score and a caution flag, so a reader can see what the record rests on rather than
+inferring it. Model identities, revisions, prompt versions and decoding parameters are recorded in
+the artefacts. The failure modes are published alongside the successes: the fields this system
+reports least confidently are named in Section IV-D and are exactly the fields a user should not
+rely on.
+
+**Accountability and human oversight.** The system publishes a silver standard, never a gold one,
+and no output is presented as verified. The caution flag exists to route records to a human, and
+Section IV-D reports honestly that it is informative on three fields and saturated on two — at
+99.4% and 99.5% it flags essentially everything, which is the same as flagging nothing. That is a
+limitation of the triage mechanism and is stated rather than presented as coverage. No claim in
+this paper requires a reader to trust an unverified automatic judgement.
+
+**`[TO FILL: the NVTV licence basis and the QUB ethics/data-governance reference. The reported run
+did use the hosted annotator — its candidate coverage on visual tags is 1.0000 across all 626 clips
+and it changes 49.0% of published tag sets (Section IV-F) — so state the approval under which
+frames were transmitted, or state that it was not separately reviewed. The supporting materials
+carry the full disclosure.]`**
+
+---
+
+## VII. CONCLUSION AND FUTURE WORK `[Heading1]`
 
 This work delivers a reliability-aware metadata pipeline for an archival community-television
 corpus: 47 programmes segmented into 626 clips with zero failures, five fields per clip generated
@@ -845,3 +928,11 @@ https://huggingface.co/docs/transformers/tasks/image_text_to_text
 
 [24] Hugging Face, "Video-text-to-text," Transformers documentation, 2026. [Online]. Available:
 https://huggingface.co/docs/transformers/tasks/video_text_to_text
+
+[25] A. Koenecke, A. Nam, E. Lake, J. Nudell, M. Quartey, Z. Mengesha, C. Toups, J. R. Rickford,
+D. Jurafsky, and S. Goel, "Racial disparities in automated speech recognition," *Proc. Nat. Acad.
+Sci.*, vol. 117, no. 14, pp. 7684–7689, 2020, doi: 10.1073/pnas.1915768117.
+
+[26] A. Koenecke, A. S. G. Choi, K. X. Mei, H. Schellmann, and M. Sloane, "Careless Whisper:
+Speech-to-text hallucination harms," in *Proc. ACM Conf. Fairness, Accountability, and
+Transparency (FAccT)*, 2024, pp. 1672–1681, doi: 10.1145/3630106.3658996.
