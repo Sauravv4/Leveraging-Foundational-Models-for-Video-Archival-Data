@@ -333,6 +333,8 @@ proposed on-screen text on 38.5% of clips (626 clips) and the **exact output-cha
 0.0000**. The veto holds across the whole corpus. This is reported as a result in the paper
 (Table VII) because it is one — a specified safety property, tested at corpus scale and confirmed.
 
+![**Figure 1.** The hosted annotator's two quantities, by field (*n* = 626). The on-screen-text row is the verification above: the annotator proposed text on 38.5% of clips and changed the published field on none of them. The visual-tag row is the opposite case and the subject of §3.6 — a source that agrees with the local consensus on 0.419 of clips yet rewrites 0.490 of them. Reproduces paper Table VII.](docs/figures/fig4_hosted_annotator.png)
+
 ### 3.6 Source-Independence Audit
 
 The equal-weight scheme assumes independent families. Two pairs are not independent:
@@ -350,6 +352,8 @@ which is **keywords alone**. There the pairwise agreements are:
 | TF-IDF / YAKE | both statistical | 624 | **0.327** |
 | KeyBERT / YAKE | embedding vs statistical | 622 | 0.108 |
 | KeyBERT / TF-IDF | embedding vs statistical | 622 | 0.078 |
+
+![**Figure 2.** Distribution of per-clip agreement tiers across the five published fields, ordered by mean agreement (*n* = 626). The ordering is the ordering of source independence, not of task difficulty: people count draws on four unrelated families, while the three keyword extractors read one transcript and place 99.0% of clips in the lowest tier. Reproduces paper Table V.](docs/figures/fig1_agreement_tiers.png)
 
 The two statistical extractors agree with each other roughly four times as often as either agrees
 with the embedding-based one — mechanism similarity predicting agreement, on the one field where
@@ -949,8 +953,12 @@ to publish. To replace the derived column with the authoritative one, read the m
   the centre-frame count is unfiltered and the other two are filtered at two occurrences. Only
   the fixed-three and scene-aware figures are directly comparable.
 - **D.2** Perturbation robustness — paper Table VI (*n* = 5).
+
+![**Figure 3.** Stability of three fields under three visual degradations (*n* = 5 calibration clips). Robustness is a property of each field rather than of the pipeline: under Gaussian blur visual tagging retains 0.96 of its output while on-screen text retains 0.07, a thirteen-fold spread under a single perturbation. Reproduces paper Table VI.](docs/figures/fig3_robustness.png)
 - **D.3** Hosted-annotator ablation — paper Table VII (*n* = 626).
 - **D.4** VLM benchmark — paper Table VIII (*n* = 626, 21,489 scores).
+
+![**Figure 4.** Agreement of seven open-weight vision-language models with the pipeline consensus, one panel per field. Model names are abbreviated: Qwen = Qwen3-VL, IVL3 = InternVL3, -I = Instruct, -T = Thinking; † marks the int4-quantised 8B models. InternVL3-2B, the smallest model in the study, leads three of five fields and beats its own 8B sibling on all three. Reproduces paper Table VIII.](docs/figures/fig2_vlm_benchmark.png)
 - **D.5** Per-field agreement distribution — paper Table V (*n* = 626, all five fields).
 - **D.6** Benchmark coverage — 626/626 on free-text and tag fields for five models; 625 (Qwen3-VL-2B-Instruct) and 624 (-2B-Thinking); people count 566–568/626.
 - **D.7** Transcript field — exactly 0.000 for InternVL3-2B, Qwen3-VL-4B-Instruct and

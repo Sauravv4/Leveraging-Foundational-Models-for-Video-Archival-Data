@@ -4,6 +4,7 @@ const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
   Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle,
   PageOrientation, TableOfContents, LevelFormat, PageBreak,
+  ImageRun,
 } = require('docx');
 
 const SRC = process.argv[2];
@@ -79,6 +80,35 @@ function mdTable(rows) {
   });
 }
 
+// PNG width/height straight from the IHDR -- no image library needed.
+function pngSize(file) {
+  const d = fs.readFileSync(file);
+  if (d.readUInt32BE(12) !== 0x49484452) throw new Error(`not a PNG: ${file}`);
+  return { w: d.readUInt32BE(16), h: d.readUInt32BE(20) };
+}
+
+// A figure: centred, scaled to the text column, with its caption beneath.
+function figure(src, caption) {
+  const { w, h } = pngSize(src);
+  const width = 624;                       // 6.5in of text column at 96 dpi
+  return [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 160, after: 60 },
+      keepNext: true,
+      children: [new ImageRun({
+        data: fs.readFileSync(src),
+        transformation: { width, height: Math.round(width * h / w) },
+      })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 240 },
+      children: inline(caption, { size: 18, color: '555555' }),
+    }),
+  ];
+}
+
 const lines = fs.readFileSync(SRC, 'utf8').split('\n');
 const children = [];
 const front = [];
@@ -113,6 +143,12 @@ while (i < lines.length) {
   // skip the editorial preamble and the markdown contents list (a field TOC replaces it)
   if (!started) {
     if (/^##\s+1\.\s/.test(line)) { started = true; } else { i++; continue; }
+  }
+
+  // figure:  ![caption](path)
+  {
+    const m = line.match(/^!\[(.*)\]\(([^)]+)\)\s*$/);
+    if (m) { children.push(...figure(m[2], m[1])); i++; continue; }
   }
 
   if (line.startsWith('>')) {
