@@ -460,10 +460,10 @@ Endowment*, vol. 11, no. 3, pp. 269–282, 2017.
 [11] R. Artstein and M. Poesio, "Inter-coder agreement for computational linguistics,"
 *Computational Linguistics*, vol. 34, no. 4, pp. 555–596, 2008.
 
-[12] Qwen Team, "Qwen3-VL technical report," 2025. **`[TO FILL: arXiv identifier]`**
+[12] Qwen Team, "Qwen3-VL technical report," arXiv:2511.21631, 2025.
 
-[13] Z. Chen *et al.*, "InternVL3: Exploring advanced training and test-time recipes for
-open-source multimodal models," 2025. **`[TO FILL: arXiv identifier]`**
+[13] J. Zhu *et al.*, "InternVL3: Exploring advanced training and test-time recipes for
+open-source multimodal models," arXiv:2504.10479, 2025.
 
 [14] A. Rohrbach *et al.*, "Object hallucination in image captioning," in *Proc. Conf. Empirical
 Methods in Natural Language Processing (EMNLP)*, 2018, pp. 4035–4045.
