@@ -656,12 +656,47 @@ wrong, so the vocabulary's apparent breadth overstates what the catalogue can ac
 
 ### 6.2 Privacy
 
-The footage shows identifiable members of the public in public settings, recorded for broadcast.
-Controls: no identity inference anywhere in the pipeline, and the hosted annotator is explicitly
-prompted against it; people count published as an integer only, never demographic attributes; the
-hosted API is optional and gated on licence and data-governance approval, with full local-only
-operation supported; API keys never written to artefacts. **`[TO FILL: NVTV licence terms; QUB
-ethics/data-governance reference; whether the reported run used the hosted API.]`**
+The footage shows identifiable members of the public in public settings, recorded and broadcast by
+NVTV. Controls: no identity inference anywhere in the pipeline, and the hosted annotator is
+explicitly prompted against it; people count published as an integer only, never demographic
+attributes; the hosted API is optional and gated on licence and data-governance approval, with full
+local-only operation supported; API keys never written to artefacts — `get_gemini_api_key` reads the
+key from the environment or the Colab secret store and it is not printed or persisted.
+
+**The reported run used the hosted API.** This must be stated plainly rather than left to the
+"optional" wording above. The published ground truth is *not* the local-only configuration: the
+hosted annotator is a weighted source in `visual_tags`, `on_screen_text` and `people_count`, its
+candidate coverage on visual tags is 1.0000 across all 626 clips, and RQ4 exists precisely because
+that source changed 49.0% of published tag sets. Every result in both documents therefore rests on
+a run in which frames left the institution.
+
+| | Reported run |
+|---|---|
+| Provider and model | Google Gemini Developer API, `gemini-3.6-flash` |
+| Transmitted per clip | Up to 5 chronological JPEG frames (scene-aware sampling), base64 inline |
+| Corpus transmitted | 626 clips, ≤ 3,130 frames |
+| Not transmitted | No audio, no transcript, no source video file, no clip identifiers beyond the request |
+| Decoding | `temperature = 0.0`, `thinking_level = "minimal"`, structured response schema |
+| Prompt constraint | *"Do not identify named people. Do not infer audio, speech, intent, location names or events that are not visibly supported."* |
+| Provenance recorded | Provider, model, SDK version, prompt version, prompt SHA-256, response-schema SHA-256, decoding parameters |
+| OCR role | `diagnostic_only_no_override` — the hosted annotator cannot override the dual-engine OCR veto |
+
+**`[TO FILL — two facts only the author holds. Replace the bracketed text and delete this marker.]`**
+
+**Licence.** The NVTV collection was supplied for this project under **`[state the basis: a written
+data-sharing agreement dated __ / written permission from __ at NVTV on __ / publicly available
+broadcast material reused under __]`**, which permits **`[research use / research and publication of
+derived metadata / …]`** and **`[does / does not]`** permit transmission of frames to a third-party
+processor.
+
+**Ethics and data governance.** The project was reviewed under **`[QUB EEECS Faculty Ethics
+Committee reference __ , granted on __ / the School's low-risk self-assessment procedure, completed
+on __ ]`**, and the use of a hosted third-party annotator was **`[covered by that review / notified
+separately on __ / not separately reviewed]`**.
+
+If the licence or the review does not cover third-party transmission, the honest disclosure is to
+say so here and to note that the pipeline supports a fully local-only configuration which would
+have avoided it — not to soften the description of what was run.
 
 ### 6.3 Fairness
 
