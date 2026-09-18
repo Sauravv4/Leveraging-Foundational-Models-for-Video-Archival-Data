@@ -52,6 +52,66 @@ def para(style, text, sect=None):
     ppr = f'<w:pPr>{ppr}</w:pPr>' if ppr else ''
     return f'<w:p>{ppr}{runs(text)}</w:p>'
 
+EMU_PER_IN = 914400
+COL_EMU = int(3.25 * EMU_PER_IN)      # text column inside IEEE margins
+FULL_EMU = int(7.00 * EMU_PER_IN)     # both columns
+NS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+NS_PIC = 'http://schemas.openxmlformats.org/drawingml/2006/picture'
+
+images = []                            # (rel_id, filename, source path)
+
+def png_size(path):
+    """Width and height in pixels from the PNG IHDR -- no image library needed."""
+    data = path.read_bytes()
+    if data[:8] != b'\x89PNG\r\n\x1a\n' or data[12:16] != b'IHDR':
+        raise ValueError(f'not a PNG: {path}')
+    return (int.from_bytes(data[16:20], 'big'),
+            int.from_bytes(data[20:24], 'big'))
+
+def figcaption(text):
+    """Figure caption; keepLines stops it splitting across a column break."""
+    return ('<w:p><w:pPr><w:pStyle w:val="figurecaption"/><w:keepLines/>'
+            f'</w:pPr>{runs(text)}</w:p>')
+
+def picture(src, full_width):
+    """An inline w:drawing scaled to the column (or page) width, aspect kept."""
+    path = pathlib.Path(src)
+    if not path.is_absolute():
+        path = SRC.parent.parent.parent / src
+    px_w, px_h = png_size(path)
+    cx = FULL_EMU if full_width else COL_EMU
+    cy = int(cx * px_h / px_w)
+    rid = f'rId{100 + len(images)}'
+    name = f'figure{len(images) + 1}.png'
+    images.append((rid, name, path))
+    n = len(images)
+    return (
+        # BodyText sets w:line="228" (95%), which squeezes the line box and
+        # lets the image bleed over the paragraph above it -- reset to 100%,
+        # and keepNext so the figure never separates from its caption.
+        '<w:p><w:pPr><w:keepNext/><w:keepLines/><w:jc w:val="center"/>'
+        '<w:ind w:start="0" w:end="0" w:firstLine="0"/>'
+        '<w:spacing w:before="120" w:after="0" w:line="240"'
+        ' w:lineRule="auto"/></w:pPr>'
+        '<w:r><w:drawing>'
+        '<wp:inline distT="0" distB="0" distL="0" distR="0">'
+        f'<wp:extent cx="{cx}" cy="{cy}"/>'
+        '<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+        f'<wp:docPr id="{900 + n}" name="Picture {n}"/>'
+        f'<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="{NS_A}"'
+        ' noChangeAspect="1"/></wp:cNvGraphicFramePr>'
+        f'<a:graphic xmlns:a="{NS_A}"><a:graphicData uri="{NS_PIC}">'
+        f'<pic:pic xmlns:pic="{NS_PIC}">'
+        f'<pic:nvPicPr><pic:cNvPr id="{900 + n}" name="{name}"/>'
+        '<pic:cNvPicPr/></pic:nvPicPr>'
+        f'<pic:blipFill><a:blip r:embed="{rid}"/>'
+        '<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+        f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/>'
+        '</a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+        '</pic:pic></a:graphicData></a:graphic>'
+        '</wp:inline></w:drawing></w:r></w:p>')
+
+
 def table(rows, full_width):
     ncol = len(rows[0])
     total = 10080 if full_width else 4680          # dxa
@@ -117,6 +177,21 @@ while i < len(lines):
         text = ' '.join(x for x in buf if x).strip('`')
         if text:
             out.append(para('BodyText', text))
+        continue
+
+    # figure:  ![caption](path)  with an optional {full} suffix
+    m = re.match(r'^!\[(.*)\]\(([^)]+)\)(\{full\})?\s*$', stripped)
+    if m:
+        caption, src, full = m.group(1), m.group(2), bool(m.group(3))
+        if full:
+            out.append(f'<w:p><w:pPr>{SECT_2COL}</w:pPr></w:p>')
+            out.append(picture(src, True))
+            out.append(figcaption(caption))
+            out.append(f'<w:p><w:pPr>{SECT_1COL}</w:pPr></w:p>')
+        else:
+            out.append(picture(src, False))
+            out.append(figcaption(caption))
+        i += 1
         continue
 
     # markdown table
@@ -222,8 +297,30 @@ while i < len(lines):
     out.append(para(style, text))
 
 # ---------------------------------------------------------------- emit
+if images:
+    media = UNPACKED / 'word/media'
+    media.mkdir(parents=True, exist_ok=True)
+    for _, name, path in images:
+        (media / name).write_bytes(path.read_bytes())
+
+    rels_path = UNPACKED / 'word/_rels/document.xml.rels'
+    rels = rels_path.read_text()
+    new = ''.join(
+        f'<Relationship Id="{rid}" Type="http://schemas.openxmlformats.org/'
+        f'officeDocument/2006/relationships/image" Target="media/{name}"/>'
+        for rid, name, _ in images)
+    rels_path.write_text(rels.replace('</Relationships>', new + '</Relationships>'))
+
+    ct_path = UNPACKED / '[Content_Types].xml'
+    ct = ct_path.read_text()
+    if 'Extension="png"' not in ct:
+        ct = ct.replace('<Default Extension="xml"',
+                        '<Default Extension="png" ContentType="image/png"/>'
+                        '<Default Extension="xml"')
+        ct_path.write_text(ct)
+
 doc = (UNPACKED / 'word/document.xml').read_text()
 head = doc[:doc.index('<w:body>') + len('<w:body>')]
 body = ''.join(out) + f'<w:sectPr>{PGSZ}<w:cols w:num="2" w:space="18pt"/></w:sectPr>'
 (UNPACKED / 'word/document.xml').write_text(head + body + '</w:body></w:document>')
-print(f'paragraphs/tables emitted: {len(out)}')
+print(f'paragraphs/tables emitted: {len(out)}; figures: {len(images)}')

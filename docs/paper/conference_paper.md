@@ -453,6 +453,8 @@ functions over one text, not three sources of evidence, and the corroboration th
 close to uninformative. Section V-C treats this as a design fault rather than a result about the
 footage.
 
+![Distribution of per-clip agreement tiers for the five published fields, ordered by mean agreement. The mean for each field is printed at the right. Fields whose evidence sources share an architecture or an input collapse into the lowest tier: keywords, whose three extractors read one Whisper transcript, place 99.0% of clips there, and on-screen text reaches high agreement on no clip at all.](docs/figures/fig1_agreement_tiers.png)
+
 **On-screen text is either vetoed or weakly corroborated, and never confidently published.** The
 strict dual-engine rule puts **53.4% of clips into `conflict`**; of the 46.6% that publish a
 value, **not one reaches high agreement**, and the mean is 0.156. Read alongside Section IV-G,
@@ -493,6 +495,8 @@ high-frequency detail that blur removes and the dual-engine consensus rule then 
 survives. People count sits between the two (0.57–0.62), consistent with detection of person-sized
 regions degrading gracefully.
 
+![Stability of three fields under three visual degradations (*n* = 5 calibration clips). Robustness is field-dependent, not pipeline-wide: under Gaussian blur, visual tagging retains 0.96 of its output while on-screen text retains 0.07, a 13-fold spread under one perturbation.](docs/figures/fig3_robustness.png)
+
 The practical consequence is a deployment rule: **on degraded source material, the scene-level
 fields remain usable and the text field should be treated as absent rather than as evidence of
 absence.** The pipeline's own `not_detected` status cannot distinguish "no text present" from "text
@@ -519,6 +523,8 @@ of III-D working exactly as specified, verified empirically rather than assumed.
 high agreement (0.8445), negligible change (1.8%).** Four families converge on integer counts, and
 the hosted vote is nearly always redundant. **Visual tags: the annotator disagrees with the local
 consensus more often than it agrees (0.4194) yet changes the published tag set on 49.0% of clips.**
+
+![Two distinct quantities for the hosted annotator, by field (*n* = 626). On visual tags the annotator agrees with the local consensus on 0.419 of clips yet changes the published tag set on 0.490 of them; on on-screen text the dual-engine veto holds the change rate to exactly zero.](docs/figures/fig4_hosted_annotator.png)
 
 That last row is the important one, and it is uncomfortable. A source that agrees with the
 existing consensus less than half the time is rewriting half of all published tag sets. Under the
@@ -561,6 +567,8 @@ sibling, on all three. The 8B Qwen does not lead any field. Quantisation confoun
 results and they should not be used to argue that scale *hurts*; the defensible claim is narrower
 and still useful: **at this task, on this corpus, a 2B model was sufficient, and paying for 8B
 bought nothing measurable.**
+
+![Agreement of seven open-weight vision-language models with the pipeline consensus, one panel per field (*n* = 626, 21,489 scores). Model names are abbreviated: Qwen = Qwen3-VL, IVL3 = InternVL3, -I = Instruct, -T = Thinking. The leading value in each field is labelled. InternVL3-2B, the smallest model in the study, leads on-screen text, visual tags and people count, and beats its own 8B sibling on all three. Transcript is at or near zero for every model, none of which accepts audio. † int4-quantised.](docs/figures/fig2_vlm_benchmark.png)
 
 **Thinking variants do not dominate their Instruct siblings.** At 2B, Thinking is level on
 on-screen text (0.384 vs 0.383) and tags (0.874 vs 0.871) but markedly ahead on people count
