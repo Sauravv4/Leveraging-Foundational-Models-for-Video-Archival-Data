@@ -3,6 +3,9 @@
 **Leveraging Foundational Models for Video Archival Data**
 NVTV public archive · MSc Artificial Intelligence · Queen's University Belfast
 
+**Code repository:** https://gitlab.eeecs.qub.ac.uk/40490925/leveraging-foundational-models-for-video-archival-data
+Assessed revision: `52977e78`
+
 > Companion to `docs/paper/conference_paper.md`. Single-column technical report. The paper carries
 > the claim and its evidence; this document carries everything that supports the claim but does not
 > fit — the full literature review, the lifecycle, the verification work, the tooling, the
@@ -1131,6 +1134,11 @@ single change to `make_consensus_field` that would make RQ4 fully auditable rath
 inferred.
 
 ### Appendix F — Reproduction
+
+All code is on QUB EEECS GitLab, with the supervisor and the assessor added as project members:
+
+> **https://gitlab.eeecs.qub.ac.uk/40490925/leveraging-foundational-models-for-video-archival-data**
+> Assessed revision `52977e78` — the full commit is `52977e7815c2372082841e7d9009c3320853eba5`.
 
 ```
 notebooks/01_metadata_pipeline.ipynb          # clips, metadata, experiments, browser

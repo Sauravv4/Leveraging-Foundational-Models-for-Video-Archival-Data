@@ -366,7 +366,8 @@ the right place for it. Section V-C treats this as a limitation rather than sett
 Seeds are fixed; model revisions are resolved and recorded as commit hashes; the manifest ordering
 is deterministic; per-clip checkpointing makes every stage resumable; failures are recorded
 against their clip identifier rather than suppressed; and all artefacts are written atomically via
-a partial-file-and-rename discipline so an interrupted run cannot leave a truncated JSON. GPU
+a partial-file-and-rename discipline so an interrupted run cannot leave a truncated JSON. All
+code is available at `https://gitlab.eeecs.qub.ac.uk/40490925/leveraging-foundational-models-for-video-archival-data` (revision `52977e78`). GPU
 inference on shared models is serialised while CPU OCR runs bounded-parallel, preventing CUDA
 contention and non-thread-safe model use.
 
