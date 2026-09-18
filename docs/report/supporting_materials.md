@@ -905,8 +905,9 @@ to publish. To replace the derived column with the authoritative one, read the m
 ### Appendix E — Qualitative Spot-Checks
 
 From Section 12 of `02_vlm_benchmark_run.ipynb`, which prints the reference metadata beside every
-model's prediction. Two clips are reproduced here because each shows something the aggregate
-tables cannot.
+model's prediction. Five clips are reproduced here because each shows something the aggregate
+tables cannot. A sixth, which the placeholder at the end of this appendix specifies, is not
+recoverable from the committed artefacts.
 
 **E.1 — `11_Poor_Mental_Health_on_Peace_Lines_150416…clip0003`: the OCR veto's false negatives.**
 
@@ -956,9 +957,94 @@ People count on this clip is the opposite case: reference 1, and all seven model
 evidence is unambiguous, independent systems converge exactly — which is the premise the whole
 agreement design rests on.
 
-**`[TO FILL: add 3–4 more clips, chosen to include at least one where the hosted annotator changed
-the published visual tags (paper §IV-F), since that is the most consequential unresolved result
-and the aggregate numbers cannot settle it.]`**
+**E.3 — `27_Growing_in_a_Shared_City_010716…clip0000`: the veto loses a name caption, and people
+count scatters on a defensible reference.**
+
+The published on-screen text is empty. Six of the seven models read the lower-third caption
+`Suzanne Wylie` / `Chief Executive, Belfast City Council`, and five also read the
+`GIRDWOOD COMMUNITY HUB` title slide and the date `14 June 2016`. E.1 showed the veto discarding a
+station ident, which an archivist would not miss; this is a named individual, their job title, an
+institution and a date — the four things a catalogue record most wants, all present on screen and
+all suppressed.
+
+| Source | People count |
+|---|---|
+| Reference (pipeline) | 1 |
+| InternVL3-2B | 1 |
+| InternVL3-8B, Qwen3-VL-2B-Instruct, Qwen3-VL-4B-Thinking | 2 |
+| Qwen3-VL-2B-Thinking, Qwen3-VL-4B-Instruct, Qwen3-VL-8B-Instruct | 3 |
+
+The clip shows one speaker in front of a presentation slide that itself contains people, so the
+reference's 1 and the models' 2–3 are both arguable and the disagreement is about what counts as a
+person, not about what is visible. Nothing in the agreement machinery can represent that: the
+people-count field's 0.812 agreement measures how often four visual sources return the same
+integer, not how often that integer is right.
+
+**E.4 — `44_Beat_The_Street_050916…clip0001`: what the models cost when they are trusted.**
+
+E.1 to E.3 all show the pipeline losing to the models. This clip is the counterweight. The
+published on-screen text is again empty and the models again recover the lower-third
+(`Dianne Whyte`, `Engagement Officer, Beat The Street`) — but two of them also emit a contact
+address that is not in the frame and not real: Qwen3-VL-4B-Instruct returns
+`team@beatthestreet.nz` and Qwen3-VL-4B-Thinking returns `beatthestreet.org.nz`, both New Zealand
+domains for a UK scheme. Qwen3-VL-4B-Thinking additionally renders the job title as
+`Engagement Officer, Beat The Straight`.
+
+This is the object-hallucination failure mode [14] in the OCR field, and it is the reason the
+strict dual-engine rule exists. A veto that suppresses four true captions and one false contact
+address is making a defensible trade for a catalogue that no one will check; the point of Appendix
+E is that the aggregate ROUGE-L numbers show only one side of it.
+
+**E.5 — `10_Jacobin_Launch_230316…clip0004`: counting a room, and the interview prior.**
+
+| Source | People count |
+|---|---|
+| Reference (pipeline) | 5 |
+| InternVL3-8B | 6 |
+| InternVL3-2B | 9 |
+| Qwen3-VL-4B-Instruct, Qwen3-VL-8B-Instruct | 10 |
+| Qwen3-VL-2B-Instruct, Qwen3-VL-2B-Thinking, Qwen3-VL-4B-Thinking | 15 |
+
+Against a seated audience the seven models span 6 to 15 and the reference says 5. E.2's unanimous
+1 and this clip's three-fold spread are the same field under different conditions, which is the
+sharpest available statement of what the headline agreement figure conceals: people count is
+reliable where the evidence is a single framed speaker and unreliable where it is a room, and one
+mean over 626 clips reports only the mixture.
+
+The visual tags show the second effect. The published tags are `audience`, `person speaking`,
+`interview`, `panel discussion`, `reporter`; the clip is a book launch with a speaker addressing a
+seated audience, which five of seven models label `public meeting` or `audience` with `stage` and
+`podium`. Neither `interview` nor `reporter` is right. The tag-frequency audit in §6.1 gives the
+reason — `person speaking` fires on 94.9% of clips and `interview` on 85.8% — so the published
+tags on this clip are close to what the vocabulary returns by default. Three of the seven models
+nonetheless also emit `interview`, which suggests the prior is in the models as well as in the
+scoring vocabulary.
+
+Every model also read `REPUBLIC` from the backdrop against an empty reference — a third
+independent instance of the veto's behaviour, in a clip chosen for other reasons.
+
+**`[TO FILL: one further clip, showing a case where the hosted annotator changed the published
+visual tags (paper §IV-F). The five clips above come from the benchmark spot-check, which prints
+the published reference against the seven benchmark models and therefore cannot show it; the
+per-clip `gemini_ablation` diagnostic lives in `ground_truth_metadata.json`, which is not in the
+repository. RQ4 reports that the hosted annotator changed the published visual tags on 49.0% of
+clips, and no single instance of that change is shown anywhere in either document. One cell in
+`01_metadata_pipeline.ipynb` produces the example:]`**
+
+```python
+gt = json.loads(FOCUSED_GROUND_TRUTH_FILE.with_name(
+    "ground_truth_metadata.json").read_text())
+for clip in gt["clips"]:
+    ev = (clip.get("ground_truth_metadata") or {}).get("visual_tags") or {}
+    abl = ev.get("gemini_ablation") or {}
+    if abl.get("available") and abl.get("exact_output_changed"):
+        print(clip["clip_id"], clip.get("split"))
+        print("  published :", ev.get("value"))
+        print("  gemini    :", abl.get("gemini_candidate"))
+        print("  agreement :", abl.get("candidate_vs_local_agreement"),
+              "| stability:", abl.get("local_vs_augmented_stability"))
+        break
+```
 
 ### Appendix F — Reproduction
 
