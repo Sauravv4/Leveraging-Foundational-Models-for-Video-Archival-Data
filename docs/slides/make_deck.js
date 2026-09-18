@@ -299,7 +299,47 @@ function bullets(s, items, opts) {
   s.addNotes('Assessors will be waiting for the training section. Answering it confidently beats leaving a gap.');
 }
 
-// ---- 9-12 · results --------------------------------------------------------
+// ---- 9 · how it is evaluated ----------------------------------------------
+{
+  const s = lightSlide('Inference and scoring are separate notebooks', 'EVALUATION');
+  const cards = [
+    ['02_vlm_benchmark.ipynb', 'GPU \u00b7 Kelvin2 MIG slice', [
+      'Seven models over all 626 clips under one protocol: 4 frames, one prompt, greedy decoding.',
+      'Writes one prediction cache per model.',
+      'Fully resumable \u2014 reloads the cache, retries only failures, skips completed work.',
+      'Each cache carries a prompt version; a stale cache is ignored, never silently mixed in.',
+    ], BLUE],
+    ['03_vlm_benchmark.ipynb', 'CPU \u00b7 anywhere, no GPU', [
+      'Loads no models at all.',
+      'Reads the ground truth and the caches, and rebuilds every comparison table in seconds.',
+      'Coverage denominators are reported beside every mean.',
+      'Scoring can be corrected and re-run without paying for inference again.',
+    ], ORANGE],
+  ];
+  cards.forEach(([name, sub, points, colour], i) => {
+    const x = M + i * 6.05;
+    s.addShape(pres.ShapeType.roundRect, {
+      x, y: 1.95, w: 5.75, h: 4.15, rectRadius: 0.12,
+      fill: { color: TINT }, line: { color: TINT },
+    });
+    s.addText(name, {
+      x: x + 0.35, y: 2.2, w: 5.05, h: 0.4, isTextBox: true, margin: 0,
+      fontFace: 'Courier New', fontSize: 15, bold: true, color: colour,
+    });
+    s.addText(sub, {
+      x: x + 0.35, y: 2.62, w: 5.05, h: 0.3, isTextBox: true, margin: 0,
+      fontFace: BODY, fontSize: 11.5, color: MUTED, charSpacing: 0.6,
+    });
+    bullets(s, points, { x: x + 0.35, y: 3.05, w: 5.05, h: 2.9, fontSize: 13 });
+  });
+  s.addText('The split is the highest-value structural decision in the project: an interrupted GPU job costs nothing, and a scoring fix never re-runs inference.', {
+    x: M, y: 6.3, w: 11.8, h: 0.6, isTextBox: true, margin: 0,
+    fontFace: BODY, fontSize: 13.5, color: NAVY, italic: true,
+  });
+  s.addNotes('This is the answer to "how is it evaluated". Show 02 resuming from its caches, then 03 rebuilding the tables with no GPU.');
+}
+
+// ---- 10-13 \u00b7 results --------------------------------------------------------
 function resultSlide(kicker, title, figure, points, note) {
   const s = lightSlide(title, kicker);
   s.addImage({ path: figure, x: M, y: 1.95, w: 6.6, h: 4.4, sizing: { type: 'contain', w: 6.6, h: 4.4 } });
