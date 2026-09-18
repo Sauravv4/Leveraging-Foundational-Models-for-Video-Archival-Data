@@ -531,7 +531,8 @@ and that a deployment which cannot tolerate that should run local-only, which th
 Seven models were run zero-shot over all 626 clips under a protocol held constant across models:
 4 uniformly sampled frames, identical prompt, greedy decoding, the same 34-label vocabulary,
 producing **21,489 (model, clip, field) scores**. Thinking variants received a larger token budget
-(1400 vs 700) to accommodate their reasoning trace, and both 8B models ran int4-quantised.
+(1400 vs 700) to accommodate their reasoning trace, and both 8B models ran int4-quantised. All
+seven were loaded through the Transformers image-text-to-text interface [23].
 
 TABLE VII. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 626)
 
@@ -666,7 +667,7 @@ tells an archivist which fields two or more independent systems corroborated and
 single source. The read-only browser delivered with this work exposes exactly those five fields
 with their evidence status, so a cataloguer's attention goes to the `needs_caution` records first.
 That is a different and more honest product than a confident automatic catalogue of unknown
-quality, and it is achievable with pretrained models and no annotation budget.
+quality, and it is achievable with pretrained models and no annotation budget. Metadata-aware retrieval has been shown to outperform plain-text baselines on structurally repetitive corpora, with field-level ablations indicating that structural cues carry strong disambiguating signal [21], so the per-field structure published here has value beyond the catalogue record itself.
 
 For practitioners choosing models, the results argue against defaulting to the largest checkpoint
 that fits: a 2B model led three of five fields, and the compute saved is better spent on a second
@@ -735,8 +736,9 @@ scores at or near zero on transcript, three of them abstaining outright.
 which converts every agreement number here into a validity measurement and settles the RQ4 tag
 question. (ii) Replace equal family weights with measured per-source reliability, for which the
 provenance machinery is already in place. (iii) Add an audio-capable multimodal model to the
-benchmark, so the transcript column tests a model that was given the information the task
-requires. (iv) Scale the ablations past 8 and 5 clips. (v) Gate the ASR stage on Whisper's own
+benchmark, and a video-native one: the 4-frame budget forced here suits image-sequence models,
+whereas prompt-guided pooling over longer sequences [22], run through the video-text-to-text
+interface [24], is built for variable-length video. (iv) Scale the ablations past 8 and 5 clips. (v) Gate the ASR stage on Whisper's own
 language-identification output, so that a mis-identified clip is flagged rather than propagated
 into the transcript-derived keyword field. (vi) Test shot-boundary clip segmentation against the
 fixed 30-second grid. (vii) Surface the sub-clip timing the pipeline already records — Whisper
@@ -818,3 +820,15 @@ features," *Information Sciences*, vol. 509, pp. 257–289, 2020.
 https://github.com/MaartenGr/KeyBERT
 
 > **`[TO FILL: add 5–10 archival/cultural-heritage AV description references to Section II-A.]`**
+
+[21] R. B. Yousuf, S. Xu, M. Sharma, A. Neeser, C. Latimer, and N. Ramakrishnan, "Utilizing
+metadata for better retrieval-augmented generation," arXiv:2601.11863, 2026.
+
+[22] R. Liu, H. Tang, H. Liu, Y. Ge, Y. Shan, C. Li, and J. Yang, "PPLLaVA: Varied video sequence
+understanding with prompt guidance," arXiv:2411.02327, 2024.
+
+[23] Hugging Face, "Image-text-to-text," Transformers documentation, 2026. [Online]. Available:
+https://huggingface.co/docs/transformers/tasks/image_text_to_text
+
+[24] Hugging Face, "Video-text-to-text," Transformers documentation, 2026. [Online]. Available:
+https://huggingface.co/docs/transformers/tasks/video_text_to_text

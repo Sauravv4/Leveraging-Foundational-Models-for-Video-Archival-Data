@@ -39,7 +39,7 @@ models; silver standard; reliability estimation.
 
 Northern Visions Television (NVTV) is a Belfast community broadcaster whose public archive holds
 long-form programming — launches, protests, panel discussions, blue-plaque unveilings — from
-across the city's civic life. Each programme carries a title and sometimes a synopsis; nothing
+across the city's civic life. Each programme carries a title and sometimes a synopsis, but nothing
 describes what happens inside it, so an archivist seeking a moment must watch it.
 
 Foundation models make automatic description feasible but not trustworthy: a pipeline emits its
@@ -63,9 +63,9 @@ No human gold standard exists, so every number measures corroboration between au
 never correctness. No model is trained or fine-tuned. Clip boundaries are fixed and
 content-independent — shot boundaries choose frames *within* a clip, never the clip itself. Only
 English speech is evaluated, and visual tags are confined to 34 labels, so a concept outside that
-list cannot be expressed. Fields are published at clip granularity, the underlying timing being
-computed and retained but not exposed, and Whisper produces one undifferentiated transcript per
-clip, so the record cannot say who said what.
+list cannot be expressed. Fields are published at clip granularity — timing is computed and
+retained but not exposed — and Whisper produces one transcript per clip, so the record cannot say
+who said what.
 
 ### D. Research Questions `[Heading2]`
 
@@ -120,8 +120,8 @@ television.
 
 The corpus is 47 NVTV programmes from 2016, segmented into fixed 30-second clips with FFmpeg,
 discarding any final fragment under 2.0 s, producing **626 clips totalling 5.09 h with zero
-failures**. Each worker writes a unique partial file, validates duration and publishes atomically,
-so ordering cannot perturb the dataset. Sources — not clips — are split, 9 programmes (123
+failures**. Each worker writes a unique partial file, validates duration and publishes by atomic
+rename, so ordering cannot perturb the dataset. Sources — not clips — are split, 9 programmes (123
 clips) to calibration and 38 (503 clips) to evaluation, by a seeded permutation of the sorted
 identifiers; only calibration material was inspected when choosing thresholds.
 
@@ -154,15 +154,15 @@ TABLE II. `[tablehead]` EVIDENCE SOURCES AND SELECTION RULES
 | People count | BLIP-VQA, ViLT-VQA, DETR, (Gemini) | One numeric vote per family; weighted mode with median tie-break |
 
 Two structural rules apply: each *family* receives equal total weight after within-family
-aggregation, so extra frames cannot manufacture voters; and no value is corroborated by the source
-that produced it.
+aggregation, so extra frames cannot manufacture voters; and no value is corroborated by its own
+source.
 
 ### C. Scene-Aware Temporal Sampling `[Heading2]`
 
 The production policy detects shot boundaries with an adaptive rolling-content detector [15],
-samples scene midpoints, always includes the temporal centre and caps at 5 frames. On-screen text
-uses a denser probe — every 2.5 s to at most 12 frames — because captions appear and disappear
-faster than the visual sampling interval.
+samples scene midpoints, includes the temporal centre and caps at 5 frames. On-screen text uses a
+denser probe — every 2.5 s to at most 12 frames — because captions appear and disappear faster
+than the visual sampling interval.
 
 ### D. Strict Dual-Engine OCR `[Heading2]`
 
@@ -180,7 +180,7 @@ two non-empty sources exist; otherwise it is `null` and `needs_caution` is set. 
 **high** (≥ 0.75), **moderate** (≥ 0.50) and **low** (< 0.50), using mean pairwise set-F1,
 1 − min(WER, 1) for transcripts and per-family voting for integers. Empty output is never
 promoted, preventing the degenerate optimum of a system that detects nothing and reports perfect
-corroboration.
+agreement.
 
 ### F. Hosted Annotator, Reproducibility and Ethics `[Heading2]`
 
@@ -201,8 +201,8 @@ vocabulary encodes one person's view of what is worth recording about a communit
 ### A. Environment and Metrics `[Heading2]`
 
 The pipeline ran on Google Colab with an **NVIDIA A100-SXM4-40GB**; the benchmark on a Kelvin2
-A100 MIG `2g.20gb` slice, which is the binding constraint on that experiment — it sets the 4-frame
-budget and forces int4 quantisation for the 8B models. Package versions are pinned.
+A100 MIG `2g.20gb` slice, the binding constraint on that experiment — it sets the 4-frame budget
+and forces int4 quantisation for the 8B models. Package versions are pinned.
 
 Each metric has a limit. *Agreement* is corroboration, not correctness; *coverage* rewards recall
 with no precision counterpart; *stability* cannot distinguish a consistently wrong system from a
@@ -222,7 +222,7 @@ TABLE III. `[tablehead]` FRAME-SAMPLING ABLATION (CALIBRATION SUBSET, *n* = 8)
 | **Scene-aware** | 4.375 | **23.0** | 0.3115 | 0.675 | 0.6089 | 0.5318 |
 
 Set-F1 columns are symmetric set overlap against the centre-frame baseline; people-count stability
-is exp(−|Δ|), so 1.0 is an identical count. The centre row is 1.0 by construction.
+is exp(−|Δ|). The centre row is 1.0 by construction.
 
 The OCR counts are **not like-for-like, and the reason is the finding.** The persistence threshold
 derives from the frame count: one frame requires one occurrence, so the centre-frame policy
@@ -252,19 +252,17 @@ TABLE IV. `[tablehead]` EVIDENCE STATUS AND AGREEMENT BY FIELD (*n* = 626)
 
 **Agreement tracks how independent a field's sources are, not how hard its task is.** People count
 is best corroborated (0.812, 62.5% high, 10.9% flagged) and has the most diverse evidence: two VQA
-models of different architecture, a detector and a hosted model, converging on an integer. Visual
-tags sit at 0.509; keywords, whose extractors read the *same* transcript, collapse to 0.173. The
-ordering is the ordering of source independence.
+models of different architecture, a detector and a hosted model. Visual tags sit at 0.509;
+keywords, whose extractors read the *same* transcript, collapse to 0.173. The ordering is the
+ordering of source independence.
 
 **Keywords do not meet the design's own premise.** The scheme requires two independent families per
-field; keywords have three extractors but one input, agreeing pairwise 0.327 (TF-IDF/YAKE), 0.108
-(KeyBERT/YAKE) and 0.078 (KeyBERT/TF-IDF) — three ranking functions over one text, not three
-sources of evidence.
+field; keywords have three extractors but one input, agreeing pairwise 0.327, 0.108 and 0.078 —
+three ranking functions over one text, not three sources.
 
 **On-screen text is either vetoed or weakly corroborated, never confidently published:** 53.4% of
-clips end in `conflict`, and of the rest none reaches high agreement — the intended trade, now
-quantified. **Transcript's 0.680 is the number to trust least**, its two sources being the most
-correlated pair in the system. 
+clips end in `conflict`, and of the rest none reaches high agreement. **Transcript's 0.680 is the
+number to trust least**, its two sources being the most correlated pair in the system. 
 
 ### D. RQ3: Perturbation Robustness `[Heading2]`
 
@@ -277,7 +275,7 @@ TABLE V. `[tablehead]` STABILITY UNDER VISUAL DEGRADATION (*n* = 5)
 | Low brightness | 0.3000 | 0.84 | 0.5742 | 0.6303 |
 
 Robustness is a property of each field, not of the pipeline. Under blur, visual tagging is almost
-unaffected (0.96) while OCR retains 7% of its output — a 13-fold difference. CLIP scores global
+unaffected (0.96) while OCR retains 7% of its output — a 13-fold difference: CLIP scores global
 scene semantics that survive low-pass filtering, whereas character recognition depends on
 high-frequency detail that blur removes and the dual-engine rule then vetoes. Hence a deployment
 rule: **on degraded material the scene-level fields remain usable and the text field should be
@@ -306,9 +304,9 @@ deployment that cannot tolerate this should run local-only, which the design per
 ### F. RQ5: Open-Weight VLM Benchmark `[Heading2]`
 
 Seven models ran zero-shot over all 626 clips under a constant protocol — 4 uniformly sampled
-frames, identical prompt, greedy decoding, the same vocabulary — producing **21,489 (model, clip,
-field) scores**. Thinking variants got a larger token budget (1400 vs 700); both 8B models ran
-int4-quantised.
+frames, identical prompt, greedy decoding, the same vocabulary — producing **21,489 scores**.
+Thinking variants got a larger token budget (1400 vs 700), both 8B models ran int4, and all seven
+loaded through the Transformers image-text-to-text interface [23].
 
 TABLE VII. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 626)
 
@@ -323,26 +321,26 @@ TABLE VII. `[tablehead]` VLM AGREEMENT WITH THE PIPELINE CONSENSUS (*n* = 626)
 | InternVL3-8B † | 0.416 | 0.027 | 0.883 | 0.366 | 0.013 |
 
 **Scale does not predict agreement.** InternVL3-2B, the smallest model here, leads three of five
-fields — on-screen text (0.544, 19% above the best Qwen), visual tags (0.890) and people
-count (0.417, 29% above) — and beats InternVL3-8B on all three, while the 8B Qwen leads nothing.
+fields — on-screen text (0.544), visual tags (0.890), people count (0.417), each 19–29% above the
+best Qwen — and beats InternVL3-8B on all three, while the 8B Qwen leads nothing.
 Quantisation confounds the 8B results, so the defensible claim is narrower: a 2B model sufficed
 and paying for 8B bought nothing measurable.
 
 **Thinking variants do not dominate their Instruct siblings.** At 2B, Thinking is level on
 on-screen text and tags but ahead on people count (0.323 vs 0.233); at 4B it is behind on
 on-screen text (0.389 vs 0.456) and ahead on people count (0.315 vs 0.241) — deliberation helping
-enumeration, not perception. Thinking models alone receive a forced-conclusion retry.
+enumeration, not perception. Only Thinking models receive a forced-conclusion retry.
 
 **Transcript is at or near zero for every model (0.034 to 0.000), as predicted.** None accepts
 audio, so the field measures how much speech is recoverable from vision alone: essentially none.
-Three score exactly 0.000 by abstaining rather than inventing dialogue, which a recall metric
-cannot distinguish from a wrong answer. **Keywords are near zero (0.027–0.040)** for the same
+Three abstain outright rather than invent dialogue, which a recall metric cannot
+distinguish from a wrong answer. **Keywords are near zero (0.027–0.040)** for the same
 reason: reference keywords come from the transcript, model keywords from frames.
 
-**The benchmark also prices the OCR veto.** On a clip whose reference on-screen text was empty, all
-seven models read the station ident *NVTV / BELFAST LOCAL TELEVISION*; on another the reference
-held only `TIVAL` while the models returned the full theatre poster — ROUGE-L recall scoring them
-against a reference less complete than they are.
+**The benchmark also prices the OCR veto.** On a clip whose reference on-screen text was empty,
+all seven models read the station ident *NVTV / BELFAST LOCAL TELEVISION*; on another the
+reference held only `TIVAL` while the models returned the full poster. ROUGE-L recall here scores
+them against a reference less complete than they are.
 
 ### G. Anticipated versus Actual `[Heading2]`
 
@@ -383,7 +381,10 @@ machinery makes it visible without resolving it.
 
 The deliverable is not a catalogue but a *triaged* one, telling an archivist which fields two or
 more independent systems corroborated and which rest on a single source — more honest than a
-confident catalogue of unknown quality, and achievable with no annotation budget.
+confident catalogue of unknown quality, and achievable with no annotation budget. Metadata-aware
+retrieval outperforms plain-text baselines on repetitive corpora, where field-level ablations show
+structural cues carrying strong disambiguating signal [21] — so per-field structure has value
+beyond the catalogue record.
 
 ### C. Limitations `[Heading2]`
 
@@ -395,8 +396,8 @@ worse, three extractors over one transcript, so 0.173 reflects the design rather
 the CLIP-pair inflation could not be measured, because the artefact stores method-level rather
 than model-level candidates. **Corroboration is blind to upstream error**: an ASR failure enters
 the keyword field with every source agreeing, all three having read the same faulty text. In the
-benchmark both 8B models ran int4, Thinking models alone receive a retry, and the 4-frame budget
-was forced by the MIG slice. The corpus is one broadcaster, one city, one year, one run per model.
+benchmark both 8B models ran int4, only Thinking models get a retry, and the 4-frame budget was
+forced by the MIG slice. The corpus is one broadcaster, one city, one year, one run per model.
 
 ---
 
@@ -415,7 +416,7 @@ every model scores at or near zero on transcript.
 **Future work.** A small human reference — a few hundred clips — would convert every agreement
 number here into a validity measurement and settle RQ4. Beyond that: measured per-source
 weights, model-level candidate lists so the correlated-source inflation can be quantified, an
-audio-capable benchmark model, larger ablations, a language-identification gate on the ASR stage,
+audio-capable benchmark model, a video-native one [22], [24], larger ablations, a language-identification gate on the ASR stage,
 the sub-clip timing the pipeline already records, and diarisation.
 
 ---
@@ -486,3 +487,14 @@ features," *Information Sciences*, vol. 509, pp. 257–289, 2020.
 [20] M. Grootendorst, "KeyBERT: Minimal keyword extraction with BERT," 2020. [Online]. Available:
 https://github.com/MaartenGr/KeyBERT
 
+[21] R. B. Yousuf, S. Xu, M. Sharma, A. Neeser, C. Latimer, and N. Ramakrishnan, "Utilizing
+metadata for better retrieval-augmented generation," arXiv:2601.11863, 2026.
+
+[22] R. Liu, H. Tang, H. Liu, Y. Ge, Y. Shan, C. Li, and J. Yang, "PPLLaVA: Varied video sequence
+understanding with prompt guidance," arXiv:2411.02327, 2024.
+
+[23] Hugging Face, "Image-text-to-text," Transformers documentation, 2026. [Online]. Available:
+https://huggingface.co/docs/transformers/tasks/image_text_to_text
+
+[24] Hugging Face, "Video-text-to-text," Transformers documentation, 2026. [Online]. Available:
+https://huggingface.co/docs/transformers/tasks/video_text_to_text
