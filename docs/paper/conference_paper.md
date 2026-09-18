@@ -1,4 +1,4 @@
-# Reliability-Aware Multi-Model Metadata Generation for Archival Community Television
+# Leveraging Foundational Models for Video Archival Data
 
 > **Draft for the IEEE conference template** (`docs/references/ieee-conference-template-letter.docx`).
 > Style names to apply are given in `[square brackets]` at each heading. Every number below is
@@ -9,7 +9,7 @@
 ---
 
 **Title** `[papertitle]`
-Reliability-Aware Multi-Model Metadata Generation for Archival Community Television
+Leveraging Foundational Models for Video Archival Data
 
 **Authors** `[Author]`
 Saurav Vijay · School of Electronics, Electrical Engineering and Computer Science · Queen's University Belfast

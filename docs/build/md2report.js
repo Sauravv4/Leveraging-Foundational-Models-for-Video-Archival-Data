@@ -70,7 +70,7 @@ front.push(new Paragraph({
 }));
 front.push(new Paragraph({
   children: [new TextRun({
-    text: 'Reliability-Aware Multi-Model Metadata Generation for Archival Community Television',
+    text: 'Leveraging Foundational Models for Video Archival Data',
     size: 28,
   })],
   alignment: AlignmentType.CENTER, spacing: { after: 100 },

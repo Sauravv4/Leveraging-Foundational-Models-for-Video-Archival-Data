@@ -1,7 +1,7 @@
-# Reliability-Aware Multi-Model Metadata Generation for Archival Community Television
+# Leveraging Foundational Models for Video Archival Data
 
 **Title** `[papertitle]`
-Reliability-Aware Multi-Model Metadata Generation for Archival Community Television
+Leveraging Foundational Models for Video Archival Data
 
 **Authors** `[Author]`
 Saurav Vijay · School of Electronics, Electrical Engineering and Computer Science · Queen's University Belfast

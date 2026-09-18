@@ -1,6 +1,6 @@
 # Supporting Materials
 
-**Reliability-Aware Multi-Model Metadata Generation for Archival Community Television**
+**Leveraging Foundational Models for Video Archival Data**
 NVTV public archive · MSc Artificial Intelligence · Queen's University Belfast
 
 > Companion to `docs/paper/conference_paper.md`. Single-column technical report. The paper carries

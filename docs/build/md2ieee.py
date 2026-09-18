@@ -85,8 +85,7 @@ start = next(i for i, l in enumerate(lines) if l.startswith('**Title**'))
 lines = lines[start:]
 
 out = []
-TITLE = ('Reliability-Aware Multi-Model Metadata Generation for '
-         'Archival Community Television')
+TITLE = 'Leveraging Foundational Models for Video Archival Data'
 out.append(para('papertitle', TITLE))
 out.append(para('Author', 'Saurav Vijay'))
 out.append(para('Author',
