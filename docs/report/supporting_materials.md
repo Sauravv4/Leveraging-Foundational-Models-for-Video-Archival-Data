@@ -767,7 +767,80 @@ The shortest are *REFRESH – PSNI Young Digital Team* (8) and *Adrian Ismay Vig
 are *Political Special* (22) and *Tourette Alliance First Annual Conference* (21). Because clips
 are a fixed 30 s, this distribution is a direct proxy for programme length: the corpus is
 short-form, and no single programme dominates it.
-**`[TO FILL: full table — title, duration, clip count, split.]`**
+Nine programmes (123 clips) fall in the calibration split and 38 (503 clips) in the evaluation
+split; the split is assigned at source level, so no programme contributes to both.
+
+| # | Programme | Date | Duration | Clips | Split |
+|---|---|---|---|---|---|
+| 1 | Launch of Belfast Children's Festival 2016 | 28 Jan 2016 | 7:58 | 16 | Cal |
+| 2 | Belfast's City Council - Step Up To Learn Programme | 28 Jan 2016 | 5:51 | 12 | Eval |
+| 3 | Fire Brigades Union Northern Ireland - Threats to the Fire and Rescue Service | 28 Jan 2016 | 8:23 | 17 | Eval |
+| 4 | Ballymena Protest | 4 Feb 2016 | 8:21 | 17 | Cal |
+| 5 | Listen to our young leaders - 4 Corners Festival | 4 Feb 2016 | 6:45 | 14 | Eval |
+| 6 | Pupils Challenge Racism - Integrated Education Fund | 4 Feb 2016 | 8:07 | 17 | Eval |
+| 7 | Adrian Ismay Vigil | 23 Mar 2016 | 4:29 | 9 | Eval |
+| 8 | REFRESH- PSNI Young Digital Team | 23 Mar 2016 | 3:51 | 8 | Eval |
+| 9 | KESS - Enabling Access to Justice | 23 Mar 2016 | 6:11 | 13 | Cal |
+| 10 | Jacobin Launch | 23 Mar 2016 | 7:48 | 16 | Eval |
+| 11 | Poor Mental Health on Peace Lines | 15 Apr 2016 | 6:01 | 12 | Eval |
+| 12 | Oliver Pollock Blue Plaque Unveiling | 15 Apr 2016 | 5:29 | 11 | Eval |
+| 13 | Reading Rooms at Open University | 15 Apr 2016 | 5:22 | 11 | Eval |
+| 14 | Kabosh - 1916 Community Play | 15 Apr 2016 | 5:20 | 11 | Eval |
+| 15 | May Day Parade | 2 May 2016 | 8:40 | 18 | Cal |
+| 16 | Political Special | 2 May 2016 | 10:57 | 22 | Eval |
+| 17 | Belfast Telegraph | 10 May 2016 | 5:57 | 12 | Eval |
+| 18 | Fergal McFerran | 10 May 2016 | 6:01 | 12 | Eval |
+| 19 | George McBride | 10 May 2016 | 5:52 | 12 | Cal |
+| 20 | Writers on Writers Festival | 10 May 2016 | 4:41 | 10 | Eval |
+| 24 | Fairtrade Campaign | 7 Jun 2016 | 5:51 | 12 | Eval |
+| 25 | Blue Plaque Unveiling | 1 Jul 2016 | 8:12 | 17 | Eval |
+| 26 | Sixteen South | 1 Jul 2016 | 5:01 | 10 | Cal |
+| 27 | Growing in a Shared City | 1 Jul 2016 | 4:32 | 10 | Eval |
+| 28 | Feile an Phobail launch | 1 Jul 2016 | 5:00 | 10 | Eval |
+| 29 | Blue Plaque Unveiling | 20 Jul 2016 | 8:35 | 18 | Eval |
+| 30 | Social Policy Association | 20 Jul 2016 | 8:37 | 18 | Eval |
+| 31 | Lilly and the Poppy Exhibition | 20 Jul 2016 | 5:34 | 12 | Eval |
+| 32 | Social Housing* | 1 Aug 2016 | 5:24 | 11 | Eval |
+| 33 | Sculpture celebrating World Boxer, Rinty Monaghan | 1 Aug 2016 | 5:17 | 11 | Eval |
+| 34 | Prince's Trust | 1 Aug 2016 | 6:23 | 13 | Eval |
+| 35 | Campa Chormaic | 1 Aug 2016 | 5:50 | 12 | Eval |
+| 36 | Tourette Alliance First Annual Conference | 9 Aug 2016 | 10:25 | 21 | Eval |
+| 37 | Clandeboye Festival | 9 Aug 2016 | 6:13 | 13 | Eval |
+| 38 | ArtisAnn Art Gallery | 9 Aug 2016 | 6:37 | 14 | Cal |
+| 39 | Child Poverty | 1 Sep 2016 | 5:50 | 12 | Eval |
+| 40 | Belfast Tattoo 2016 | 1 Sep 2016 | 5:55 | 12 | Eval |
+| 41 | Healthy Lunches | 1 Sep 2016 | 6:01 | 12 | Eval |
+| 42 | Traffic Congestion in Belfast City Centre | 1 Sep 2016 | 5:01 | 10 | Eval |
+| 43 | Market Tunnels | 5 Sep 2016 | 6:07 | 13 | Eval |
+| 44 | Beat The Street | 5 Sep 2016 | 5:59 | 12 | Cal |
+| 45 | Relate NI | 5 Sep 2016 | 5:19 | 11 | Cal |
+| 46 | Belfast Comedy Festival | 5 Sep 2016 | 5:16 | 11 | Eval |
+| 47 | Millions Missing Demonstration | 29 Sep 2016 | 8:01 | 16 | Eval |
+| 48 | Shankill Arts Forum | 29 Sep 2016 | 7:01 | 14 | Eval |
+| 49 | Arabic in Northern Ireland Schools | 29 Sep 2016 | 7:25 | 15 | Eval |
+| 50 | WHAT YOU SAY MATTERS Youth Forum | 31 Oct 2016 | 7:43 | 16 | Eval |
+| | **Total — 47 programmes** | | **5:05:12** | **626** | **123 / 503** |
+
+Programme numbering is NVTV's own and is not contiguous — 21, 22 and 23 are absent from the
+supplied collection, which is why 47 programmes carry numbers running to 50.
+
+**Provenance of each column.** Programme title, clip count and split are read directly from
+`clip_manifest.csv` and are authoritative. Durations are derived from the shot-detection pass of
+§3.8 (the end timestamp of a programme's final scene) rather than from FFprobe, and are therefore
+accurate to the frame rather than to the container header; they are reported to the nearest
+second. They sum to 17,988.4 s over the 46 programmes the detector covered; subtracting that from
+the corpus total of 18,312 s recorded above gives 323.6 s — the 5:24 marked **`*`** for programme
+32, which the detector did not process. That back-derived value is consistent with the programme's
+manifest clip count of 11 (ten full clips plus a 24 s tail), which is the check that makes it safe
+to publish. To replace the derived column with the authoritative one, read the manifest's own
+`source_duration_sec` field:
+
+```python
+(pd.read_csv(CFG.manifest_file)
+   .groupby(['source_video', 'split'], as_index=False)
+   .agg(duration_sec=('source_duration_sec', 'first'), clips=('clip_id', 'size'))
+   .sort_values('source_video'))
+```
 
 ### Appendix D — Full Result Tables
 

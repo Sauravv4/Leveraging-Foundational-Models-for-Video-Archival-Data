@@ -37,16 +37,35 @@ function body(text, extra = {}) {
   });
 }
 
-function mdTable(rows) {
+// Column widths proportional to the longest cell in each column, so a table of
+// one long text column and several short numeric ones does not wrap the text
+// column to a sliver. Clamped so no column drops below 6% of the content width.
+function columnWidths(rows) {
   const ncol = rows[0].length;
-  const w = Math.floor(CONTENT_W / ncol);
+  const longest = Array(ncol).fill(1);
+  for (const cells of rows) {
+    cells.forEach((c, i) => {
+      const len = c.replace(/[*`]/g, '').length;
+      if (len > longest[i]) longest[i] = len;
+    });
+  }
+  const floor = 0.06;
+  const weights = longest.map((n) => Math.max(Math.sqrt(n), floor * ncol));
+  const total = weights.reduce((a, b) => a + b, 0);
+  const widths = weights.map((x) => Math.floor((x / total) * CONTENT_W));
+  widths[ncol - 1] += CONTENT_W - widths.reduce((a, b) => a + b, 0);
+  return widths;
+}
+
+function mdTable(rows) {
+  const widths = columnWidths(rows);
   return new Table({
-    columnWidths: Array(ncol).fill(w),
+    columnWidths: widths,
     width: { size: CONTENT_W, type: WidthType.DXA },
     rows: rows.map((cells, r) => new TableRow({
       tableHeader: r === 0,
-      children: cells.map((c) => new TableCell({
-        width: { size: w, type: WidthType.DXA },
+      children: cells.map((c, ci) => new TableCell({
+        width: { size: widths[ci], type: WidthType.DXA },
         shading: r === 0
           ? { type: ShadingType.CLEAR, fill: 'EFEFEF', color: 'auto' }
           : undefined,
