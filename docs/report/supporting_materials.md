@@ -20,6 +20,7 @@ NVTV public archive · MSc Artificial Intelligence · Queen's University Belfast
 5. Reflection
 6. Responsible AI
 7. Appendices
+8. References
 
 ---
 
@@ -393,15 +394,20 @@ correlated-source limitation from a caveat into a measurement.]`**
 
 | Role | Model | Notes |
 |---|---|---|
-| ASR (primary) | `whisper-small` | Also performs language ID |
-| ASR (verifier) | `whisper-turbo` | Deterministic output published |
-| OCR | Tesseract; EasyOCR | Both required for publication |
-| Visual tags (primary) | `openai/clip-vit-base-patch32` | 34-label vocabulary |
-| Visual tags (verifier) | `openai/clip-vit-large-patch14` | Prompt: "a photograph of {label}" |
-| People count | `Salesforce/blip-vqa-base`; `dandelin/vilt-b32-finetuned-vqa`; `facebook/detr-resnet-50` | Three families |
-| Keywords | KeyBERT (`all-MiniLM-L6-v2`); YAKE; TF-IDF | Top *k* = 5 |
+| ASR (primary) | `whisper-small` [6] | Also performs language ID |
+| ASR (verifier) | `whisper-turbo` [6] | Deterministic output published |
+| OCR | Tesseract [17]; EasyOCR | Both required for publication |
+| Visual tags (primary) | `openai/clip-vit-base-patch32` [5] | 34-label vocabulary |
+| Visual tags (verifier) | `openai/clip-vit-large-patch14` [5] | Prompt: "a photograph of {label}" |
+| People count | `blip-vqa-base` [7]; `vilt-b32-finetuned-vqa` [8]; `detr-resnet-50` [9] | Three families |
+| Keywords | KeyBERT [20] (`all-MiniLM-L6-v2` [18]); YAKE [19]; TF-IDF | Top *k* = 5 |
 | Hosted annotator | `gemini-3.6-flash` | Optional; ≤ 5 frames; one family vote |
-| Benchmark | Qwen3-VL 2B/4B/8B (Instruct, Thinking); InternVL3-2B/-8B | 8B models int4 |
+| Benchmark | Qwen3-VL [12] 2B/4B/8B (Instruct, Thinking); InternVL3 [13] -2B/-8B | 8B models int4, loaded through the Transformers image-text-to-text interface [23] |
+
+Scene detection uses PySceneDetect [15]; the benchmark's free-text fields are scored with
+ROUGE-L recall [16]. A video-native model such as PPLLaVA [22], run through the video-text-to-text
+interface [24], would remove the fixed frame budget discussed in §4.4, and metadata-aware
+retrieval work [21] motivates publishing per-field structure rather than a flat caption.
 
 ### 4.4 Tool-Driven Constraints
 
@@ -737,3 +743,55 @@ notebooks/03_vlm_benchmark_comparison.ipynb   # scoring and tables only, no GPU 
 
 Run 01 top to bottom on a GPU runtime with the Drive layout in its header cell; run 02 on a GPU
 node; run 03 anywhere. All three are resumable and skip completed work.
+
+---
+
+## References
+
+[1] A. F. Smeaton, P. Over, and W. Kraaij, "Evaluation campaigns and TRECVid," in *Proc. 8th ACM Int. Workshop on Multimedia Information Retrieval (MIR)*, 2006, pp. 321–330.
+
+[2] M. Mühling, M. Meister, N. Korfhage, J. Wehling, A. Hörth, R. Ewerth, and B. Freisleben, "Content-based video retrieval in historical collections of the German Broadcasting Archive," *Int. J. on Digital Libraries*, vol. 20, no. 2, pp. 167–183, 2019, doi: 10.1007/s00799-018-0236-z.
+
+[3] M. Mühling, N. Korfhage, K. Pustu-Iren, J. Bars, M. Knapp, H. Bellafkir, M. Vogelbacher, D. Schneider, A. Hörth, R. Ewerth, and B. Freisleben, "VIVA: Visual information retrieval in video archives," *Int. J. on Digital Libraries*, vol. 23, no. 4, pp. 319–333, 2022, doi: 10.1007/s00799-022-00337-y.
+
+[4] F. Pessanha and A. Akdag Salah, "A computational look at oral history archives," *ACM J. on Computing and Cultural Heritage*, vol. 15, no. 1, art. 6, pp. 1–16, 2022, doi: 10.1145/3477605.
+
+[5] A. Radford *et al.*, "Learning transferable visual models from natural language supervision," in *Proc. 38th Int. Conf. Machine Learning (ICML)*, 2021, pp. 8748–8763.
+
+[6] A. Radford *et al.*, "Robust speech recognition via large-scale weak supervision," in *Proc. 40th Int. Conf. Machine Learning (ICML)*, 2023, pp. 28492–28518.
+
+[7] J. Li, D. Li, C. Xiong, and S. Hoi, "BLIP: Bootstrapping language-image pre-training for unified vision-language understanding and generation," in *Proc. 39th Int. Conf. Machine Learning (ICML)*, 2022, pp. 12888–12900.
+
+[8] W. Kim, B. Son, and I. Kim, "ViLT: Vision-and-language transformer without convolution or region supervision," in *Proc. 38th Int. Conf. Machine Learning (ICML)*, 2021, pp. 5583–5594.
+
+[9] N. Carion *et al.*, "End-to-end object detection with transformers," in *Proc. European Conf. Computer Vision (ECCV)*, 2020, pp. 213–229.
+
+[10] A. Ratner *et al.*, "Snorkel: Rapid training data creation with weak supervision," *Proc. VLDB Endowment*, vol. 11, no. 3, pp. 269–282, 2017.
+
+[11] R. Artstein and M. Poesio, "Inter-coder agreement for computational linguistics," *Computational Linguistics*, vol. 34, no. 4, pp. 555–596, 2008.
+
+[12] Qwen Team, "Qwen3-VL technical report," arXiv:2511.21631, 2025.
+
+[13] J. Zhu *et al.*, "InternVL3: Exploring advanced training and test-time recipes for open-source multimodal models," arXiv:2504.10479, 2025.
+
+[14] A. Rohrbach *et al.*, "Object hallucination in image captioning," in *Proc. Conf. Empirical Methods in Natural Language Processing (EMNLP)*, 2018, pp. 4035–4045.
+
+[15] B. Castellano, "PySceneDetect: Video scene cut detection and analysis tool," 2014–2025. [Online]. Available: https://www.scenedetect.com
+
+[16] C.-Y. Lin, "ROUGE: A package for automatic evaluation of summaries," in *Text Summarization Branches Out*, ACL Workshop, 2004, pp. 74–81.
+
+[17] R. Smith, "An overview of the Tesseract OCR engine," in *Proc. 9th Int. Conf. Document Analysis and Recognition (ICDAR)*, 2007, pp. 629–633.
+
+[18] N. Reimers and I. Gurevych, "Sentence-BERT: Sentence embeddings using Siamese BERT-networks," in *Proc. EMNLP-IJCNLP*, 2019, pp. 3982–3992.
+
+[19] R. Campos *et al.*, "YAKE! Keyword extraction from single documents using multiple local features," *Information Sciences*, vol. 509, pp. 257–289, 2020.
+
+[20] M. Grootendorst, "KeyBERT: Minimal keyword extraction with BERT," 2020. [Online]. Available: https://github.com/MaartenGr/KeyBERT
+
+[21] R. B. Yousuf, S. Xu, M. Sharma, A. Neeser, C. Latimer, and N. Ramakrishnan, "Utilizing metadata for better retrieval-augmented generation," arXiv:2601.11863, 2026.
+
+[22] R. Liu, H. Tang, H. Liu, Y. Ge, Y. Shan, C. Li, and J. Yang, "PPLLaVA: Varied video sequence understanding with prompt guidance," arXiv:2411.02327, 2024.
+
+[23] Hugging Face, "Image-text-to-text," Transformers documentation, 2026. [Online]. Available: https://huggingface.co/docs/transformers/tasks/image_text_to_text
+
+[24] Hugging Face, "Video-text-to-text," Transformers documentation, 2026. [Online]. Available: https://huggingface.co/docs/transformers/tasks/video_text_to_text
