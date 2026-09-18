@@ -710,9 +710,45 @@ system should enter a public catalogue as verified without that step.
 
 ### 6.6 AI Assistance and Student Responsibility
 
-**`[TO FILL: state which AI tools were used, for what — code scaffolding, debugging, drafting —
-and confirm that all experimental design, execution, interpretation and the claims made are the
-author's own and have been verified. Both exemplars carry this section; QUB requires it.]`**
+**Tool used.** Anthropic's Claude, accessed through Claude Code, was the only generative AI
+assistant used in preparing this project. No other AI writing, coding or research tool contributed
+to any part of the work.
+
+**A distinction that matters here.** This project *studies* foundation models, so two different
+things could be meant by "AI was used". The models named throughout these documents — Whisper,
+CLIP, BLIP, ViLT, DETR, KeyBERT, Qwen3-VL, InternVL3 and the hosted Gemini annotator — are the
+**object of study**: components of the system under test, specified, configured, run and evaluated
+by the author, and documented in §4.3 and the paper's §III. They are not authoring aids. The
+declaration below concerns only Claude, which was used as an assistant in building and writing up
+the work.
+
+| Activity | Extent of AI assistance |
+|---|---|
+| Research questions and experimental design | **None.** The author's own. |
+| Pipeline design and implementation (`01_metadata_pipeline.ipynb`) | **None.** The author's own. |
+| VLM benchmark design and implementation (`02`, `03`) | **None.** The author's own. |
+| Execution on Colab and Kelvin2, and all resulting data | **None.** Run by the author. |
+| Scene detection and hosted-annotator scripts | **None.** The author's own. |
+| Post-hoc analysis scripts (`scripts/`) | Drafted with Claude to the author's specification. Every figure they produce was re-run and checked by the author. |
+| Document build tooling (`docs/build/`) | Drafted with Claude. Affects formatting only; it carries no content and computes no result. |
+| Prose of the conference paper and this report | Drafted with Claude from the author's notebooks, executed outputs and written direction, then revised and verified by the author. |
+| Reference list | Formatting and bibliographic lookup assisted. Each entry was checked by the author against the published source. |
+| Debugging | Used conversationally throughout, as a reference and a second reader. |
+
+**Verification.** Every quantitative claim in both documents traces to an executed notebook cell or
+to a script committed to the repository, and the author has checked each figure against its source
+output. Figures that could not be verified against an artefact are marked **`[TO FILL]`** rather
+than estimated or carried over from an earlier draft — the visible placeholders are a deliberate
+part of this discipline, not an oversight. Two results were withdrawn or corrected by exactly this
+process rather than published: the superseded 615-clip ground truth (§3.7) and the per-model
+agreement-tier charts, which proved vacuous on inspection and are excluded (Appendix D.8).
+
+**Responsibility.** The experimental design, the implementation, the execution, the analysis, the
+interpretation of the results and every claim and conclusion in both documents are the author's
+own. No research question, finding, result or conclusion originated from an AI assistant. The
+author has read, checked and accepted every sentence in both documents and takes full
+responsibility for their content, including for any error that AI assistance introduced and the
+author did not catch.
 
 ---
 
